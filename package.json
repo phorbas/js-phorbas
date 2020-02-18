@@ -1,0 +1,35 @@
+{
+  "name": "phorbas",
+  "version": "0.0.0",
+  "description": "Persistent binary data storage",
+  "license": "BSD-2-Clause",
+  "author": "Shane Holloway <shane.holloway@ieee.org>",
+  "homepage": "https://github.com/shanewholloway/js-phorbas#readme",
+  "bugs": {
+    "url": "https://github.com/shanewholloway/js-phorbas/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@github.com/shanewholloway/js-phorbas.git"
+  },
+  "files": [
+    "cjs/",
+    "code/",
+    "esm/",
+    "umd/"
+  ],
+  "dependencies": {},
+  "devDependencies": {
+    "cbor-codec": "^0.1.2",
+    "rollup": "^1.31.1",
+    "rollup-plugin-jsy-lite": "^1.5.1",
+    "u8-utils": "^0.3.0"
+  },
+  "scripts": {
+    "clean": "rm -rf ./cjs/* ./esm/* ./umd/*",
+    "build": "rollup --config",
+    "watch": "npm -s run build -- --watch",
+    "pretest": "npm -s run build",
+    "test": "true"
+  }
+}

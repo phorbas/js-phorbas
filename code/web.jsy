@@ -1,0 +1,4 @@
+export const ts = new Date()
+export const platform = 'web'
+console.log @
+  `WEB Hello from JSY at ${ts.toISOString()} (generated on 2020-01-29T21:33:17.425Z)!`

@@ -1,0 +1,9 @@
+#IF PLAT_NODEJS
+  import {platform} from './nodejs.jsy' 
+  export * from './nodejs.jsy' 
+
+#ELIF PLAT_WEB
+  import {platform} from './web.jsy' 
+  export * from './web.jsy' 
+
+console.log @ `The platform is: "${platform}"`
