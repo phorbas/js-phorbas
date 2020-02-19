@@ -1,0 +1,108 @@
+/*
+
+Implements Opaque principle using Tahoe-LAFS scheme for creating encryption key
+from cryptographic hash over file content. Uses AES-GCM instead of AES-CTR for
+self-verifying data integrity properties.
+
+[Tahoe-LAFS]: https://tahoe-lafs.readthedocs.io/en/tahoe-lafs-1.12.1/specifications/file-encoding.html
+
+*/
+
+import sha_256 from './iso_sha_256.jsy'
+import aes_256_gcm from './iso_aes_gcm.jsy'
+
+
+const _wm_hex = new WeakMap()
+function _get_hex_key() ::
+  const {key_public} = this
+  let r = _wm_hex.get(key_public)
+  if undefined === r ::
+    _wm_hex.set @ key_public, r = u8_to_hex(key_public)
+  return r
+
+function _get_binary_key() ::
+  return this.key_public
+
+
+const _wm_content = new WeakMap()
+
+const tahoe_keyctx_api = @{}
+  hex_key: _get_hex_key
+  with_storage(storage) ::
+    return Object.create @
+      this.__root__ || tahoe_keyctx_api
+      @{} storage: { value: storage }
+          key: storage.uses_binary_key
+            ? @{} get: _get_binary_key
+            : @{} get: _get_hex_key
+
+
+  forget() :: _wm_content.delete(this); return this
+
+
+  async store() ::
+    const raw_content = _wm_content.get(this)
+    if undefined === content ::
+      throw new Error('No associated raw_content')
+
+    const {key_secret, key_public, key, storage} = this
+    const enc_content = await aes_256_gcm.encrypt @
+      raw_content, key_secret, key_public
+
+    await storage.store_at(key, enc_content)
+
+    return this
+
+  async fetch() ::
+    const raw_content = _wm_content.get(this)
+    if undefined !== raw_content ::
+      return raw_content
+
+    const p = this._fetch()
+    _wm_content.set(this, p)
+    return p
+
+  async _fetch() ::
+    const {key_secret, key_public, key, storage} = this
+    const enc_content = await storage.fetch(key)
+
+    const raw_content = await aes_256_gcm.decrypt @
+      enc_content, key_secret, key_public
+    _wm_content.set(this, raw_content)
+    return raw_content
+
+
+
+const tahoe_opaque_base = @{}
+  keyctx_api: tahoe_keyctx_api
+
+  with_storage(storage) ::
+    return @{}
+      __proto__: this.__root__ || tahoe_opaque_base
+      keyctx_api: this.keyctx_api.with_storage(storage)
+
+  async as_keyctx(raw_content) ::
+    if ! raw_content instanceof Uint8Array ::
+      raw_content = new Uint8Array @ await raw_content
+
+    const key_secret = new Uint8Array @ await sha_256(raw_content)
+    return this.from_key(key_secret)
+
+  async from_key(key_secret) ::
+    if ! key_secret instanceof Uint8Array ::
+      key_secret = new Uint8Array @ await key_secret
+
+    const key_public = new Uint8Array @ await sha_256(key_secret)
+    return @{} __proto__: this.keyctx_api, key_public, key_secret,
+
+  async from_content(raw_content, storage) ::
+    const keyctx = await this.as_keyctx(raw_content)
+    _wm_content.set @ keyctx, raw_content
+    return keyctx
+
+
+export const tahoe_opaque = @{}
+  __proto__: tahoe_opaque_base
+
+export default tahoe_opaque
+

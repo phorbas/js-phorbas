@@ -1,7 +1,10 @@
 cjs/
 esm/
 umd/
+iife/
 dist/
+.cache/
 node_modules/
 npm-debug.log
 .hggitignore
+__unittest*

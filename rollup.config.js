@@ -1,4 +1,5 @@
 import pkg from './package.json'
+import rpi_resolve from '@rollup/plugin-node-resolve'
 import rpi_jsy from 'rollup-plugin-jsy-lite'
 const pkg_name = (pkg.name || 'private').replace('-', '_')
 
@@ -6,13 +7,11 @@ const configs = []
 export default configs
 
 const sourcemap = true
-const external = []
+const external = ['crypto']
 
-const plugins = []
-
-// Allow Node module resolution -- https://github.com/rollup/plugins/tree/master/packages/node-resolve#readme
-/// import rpi_resolve from '@rollup/plugin-node-resolve'
-/// plugins.push(rpi_resolve())
+const plugins = [
+  rpi_resolve({preferBuiltins: true}),
+]
 
 const plugins_nodejs = [
   rpi_jsy({defines: {PLAT_NODEJS: true}}),

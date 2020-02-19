@@ -1,0 +1,6 @@
+const { assert } = require('chai')
+
+describe @ 'smoke', @=> ::
+  it @ 'basics', @=> ::
+    assert @ 'works'
+

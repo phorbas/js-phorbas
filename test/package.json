@@ -1,0 +1,23 @@
+{
+  "private": true,
+  "dependencies": {
+    "chai": "^4.2.0",
+    "mocha": "^7.0.1",
+    "phorbas": "file:.."
+  },
+  "devDependencies": {
+    "@rollup/plugin-node-resolve": "^7.1.1",
+    "rollup": "^1.31.1",
+    "rollup-plugin-jsy-lite": "^1.5.1"
+  },
+  "scripts": {
+    "prebuild": "test -d ./node_modules || npm -s install",
+    "build": "rollup --config",
+    "clean": "rm ./__unittest.*",
+    "watch": "npm -s run build -- --watch",
+    "pretest": "npm -s run build",
+    "test": "npm -s run test:one",
+    "test:one": "mocha ./__unittest.cjs.js",
+    "test:min": "mocha --reporter=min ./__unittest.cjs.js"
+  }
+}

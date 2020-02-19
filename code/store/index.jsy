@@ -1,0 +1,17 @@
+
+/*
+type KeyData : ArrayBuffer; // Max 16 KB
+type ContentData : ArrayBuffer; // Max 16 MB
+type StoreRecord ::
+  key : KeyData
+  key_pub : KeyData
+
+interface phorbas_storage_api ::
+  async fetch(key : KeyData) : ContentData | null ::
+  async store(content : ContentData) : StoreRecord | null ::
+    const key = await this.as_key(content)
+    return this.store_at(key, content)
+
+  async store_at(key : KeyData, content : ContentData) : StoreRecord | null ::
+
+*/
