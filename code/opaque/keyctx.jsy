@@ -6,6 +6,8 @@ const _wm_ctx_content = new WeakMap()
 const keyctx_proto = @{}
   cipher: abstract_cipher()
   storage: abstract_storage()
+  kdf_cipher: key_secret => key_secret
+  kdf_iv: key_public => key_public
 
   with_ctx({cipher, storage}) ::
     const props = @{}
@@ -35,8 +37,9 @@ const keyctx_proto = @{}
       throw new Error('No associated raw_content')
 
     const {key_secret, key_public, key_store, cipher, storage} = this
-    const enc_content = await cipher.encrypt @
-      raw_content, key_secret, key_public
+    const enc_content = await cipher.encrypt @ raw_content,
+      await this.kdf_cipher(key_secret)
+      await this.kdf_iv(key_public)
 
     await storage.store_at(key_store, enc_content)
     return this
@@ -59,8 +62,9 @@ const keyctx_proto = @{}
     if ! enc_content instanceof Uint8Array ::
       return enc_content
 
-    const raw_content = await cipher.decrypt @
-      enc_content, key_secret, key_public
+    const raw_content = await cipher.decrypt @ enc_content,
+      await this.kdf_cipher(key_secret)
+      await this.kdf_iv(key_public)
 
     this.remember(raw_content)
     return raw_content

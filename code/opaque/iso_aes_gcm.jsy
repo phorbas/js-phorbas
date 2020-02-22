@@ -3,11 +3,11 @@
   import {createSecretKey, createCipheriv, createDecipheriv} from 'crypto'
 
   const aes_256_gcm__node = @{}
-    async encrypt(raw_content, key_secret, key_public) ::
+    async encrypt(raw_content, key_cipher, key_iv) ::
       const cipher = createCipheriv @
         'aes-256-gcm'
-        createSecretKey @ key_secret.subarray(-32)
-        key_public.subarray(-12) // IV of 96 bits (12 bytes) 
+        createSecretKey @ key_cipher.subarray(-32)
+        key_iv.subarray(-12) // IV of 96 bits (12 bytes) 
 
       const lst = @[]
         cipher.update(raw_content)
@@ -16,11 +16,11 @@
 
       return new Uint8Array @ Buffer.concat(lst)
 
-    async decrypt(enc_content, key_secret, key_public) ::
+    async decrypt(enc_content, key_cipher, key_iv) ::
       const cipher = createDecipheriv @
         'aes-256-gcm'
-        createSecretKey @ key_secret.subarray(-32)
-        key_public.subarray(-12) // IV of 96 bits (12 bytes) 
+        createSecretKey @ key_cipher.subarray(-32)
+        key_iv.subarray(-12) // IV of 96 bits (12 bytes) 
 
       // NodeJS uses GCM auth tags of 128 bits (16 bytes)
       cipher.setAuthTag @ enc_content.subarray(-16)
@@ -41,18 +41,18 @@
       {name: 'AES-GCM', length: 256}, false, ['encrypt', 'decrypt']
 
   const aes_256_gcm__web = @{}
-    async encrypt(raw_content, key_secret, key_public) ::
+    async encrypt(raw_content, key_cipher, key_iv) ::
       return new Uint8Array @ await crypto.subtle.encrypt @
         @{} name: 'AES-GCM', tagLength: 128,
-            iv: key_public.subarray(-12) // IV of 96 bits (12 bytes) 
-        await _import_aes_gcm_raw @ key_secret
+            iv: key_iv.subarray(-12) // IV of 96 bits (12 bytes) 
+        await _import_aes_gcm_raw @ key_cipher
         raw_content
 
-    async decrypt(enc_content, key_secret, key_public) ::
+    async decrypt(enc_content, key_cipher, key_iv) ::
       return new Uint8Array @ await crypto.subtle.decrypt @
         @{} name: 'AES-GCM', tagLength: 128,
-            iv: key_public.subarray(-12) // IV of 96 bits (12 bytes) 
-        await _import_aes_gcm_raw @ key_secret
+            iv: key_iv.subarray(-12) // IV of 96 bits (12 bytes) 
+        await _import_aes_gcm_raw @ key_cipher
         enc_content
 
   export const aes_256_gcm = aes_256_gcm__web
