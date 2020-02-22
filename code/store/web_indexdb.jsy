@@ -1,0 +1,51 @@
+
+export ::
+  web_indexdb_store as default,
+  web_indexdb_store as indexdb_store,
+  web_indexdb_store as web_idb_store,
+  web_indexdb_store as idb_store,
+
+export async function web_indexdb_store(db_name='phorbas', store_name='kv') ::
+  const {txn_ro, txn_rw} = with_idb_store_ctx @
+    await idb_open(db_name, store_name), store_name
+
+  return @{}
+    uses_binary_key: true
+
+    async store_at(key, enc_content) ::
+      const {kv, txn_done} = txn_rw()
+      kv.put @ enc_content, key
+      await txn_done
+      return true
+
+    async fetch_at(key) ::
+      const {kv, txn_done} = txn_ro()
+      const ans = idb_req @ kv.get(key)
+      await txn_done
+      return await ans
+
+
+function with_idb_store_ctx(idb, store_name) ::
+  return @{}
+    txn_ro: idb_txn.bind(null, idb, store_name, 'readonly')
+    txn_rw: idb_txn.bind(null, idb, store_name, 'readwrite')
+  
+function idb_txn(idb, store_name, mode) ::
+  const txn = idb.transaction(store_name, mode)
+  return @{} txn
+    kv: txn.objectStore(store_name)
+    txn_done: new Promise @\ resolve, reject ::
+      txn.oncomplete = resolve
+      txn.onabort = txn.onerror = @=> reject @ txn.error
+
+function idb_open(db_name, store_name) ::
+  const req = indexedDB.open(db_name, 1)
+  req.onupgradeneeded = @=>
+    req.result.createObjectStore(store_name)
+  return idb_req(req)
+
+function idb_req(req) ::
+  return new Promise @\ resolve, reject ::
+    req.onsuccess = @=> resolve @ req.result
+    req.onerror = @=> reject @ req.error
+

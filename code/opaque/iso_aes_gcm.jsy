@@ -7,11 +7,11 @@
       const cipher = createCipheriv @
         'aes-256-gcm'
         createSecretKey @ key_secret.subarray(-32)
-        key_public.subarray(-32)
+        key_public.subarray(-12) // IV of 96 bits (12 bytes) 
 
       const lst = @[]
         cipher.update(raw_content)
-        cipher.finish()
+        cipher.final()
         cipher.getAuthTag() // NodeJS uses GCM auth tags of 128 bits (16 bytes)
 
       return new Uint8Array @ Buffer.concat(lst)
@@ -28,7 +28,7 @@
 
       return new Uint8Array @ Buffer.concat @#
         cipher.update(enc_content)
-        cipher.finish()
+        cipher.final()
 
 
   export const aes_256_gcm = aes_256_gcm__node

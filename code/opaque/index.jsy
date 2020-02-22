@@ -1,1 +1,4 @@
+export * from './keyctx.jsy'
+export * from './opaque.jsy'
 export * from './tahoe.jsy'
+export {default} from './tahoe.jsy'

@@ -1,13 +1,23 @@
 #IF PLAT_NODEJS
   import {createHash} from 'crypto'
 
-  export const sha_256__node = async data => new Uint8Array @
-    createHash('sha256').update(await data).digest()
-  export const sha_256 = sha_256__node
+  export const u8_sha_256__node = async data =>
+    new Uint8Array @
+      createHash('sha256')
+        .update(await data)
+        .digest()
+
+  export const u8_sha_256 = u8_sha_256__node
+
 
 #ELIF PLAT_WEB
-  export const sha_256__web = crypto.subtle.digest
-    .bind @ crypto.subtle, { name: "SHA-256" }
-  export const sha_256 = sha_256__web
+  const _sha_256__web_ab = crypto.subtle
+    .digest.bind @ crypto.subtle, { name: "SHA-256" }
 
-export default sha_256
+  export const u8_sha_256__web = async data =>
+    new Uint8Array @
+      await _sha_256__web_ab(data)
+  export const u8_sha_256 = u8_sha_256__web
+
+
+export default u8_sha_256

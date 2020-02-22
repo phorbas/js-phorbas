@@ -2,8 +2,9 @@ import rpi_resolve from '@rollup/plugin-node-resolve'
 import rpi_jsy from 'rollup-plugin-jsy-lite'
 
 const sourcemap = 'inline'
+const external_nodejs = ['crypto']
 const plugins = [
-  rpi_resolve(),
+  rpi_resolve({preferBuiltins: true}),
 ]
 
 const plugins_nodejs = [
@@ -17,7 +18,7 @@ const plugins_web = [
 
 
 export default [
-  { input: `./unittest.jsy`, plugins: plugins_nodejs,
+  { input: `./unittest.jsy`, plugins: plugins_nodejs, external: external_nodejs,
     output: { file: './__unittest.cjs.js', format: 'cjs', sourcemap } },
 
   { input: `./unittest.jsy`, context: 'window', plugins: plugins_web,

@@ -1,6 +1,6 @@
 {
   "name": "phorbas",
-  "version": "0.0.0",
+  "version": "0.0.1",
   "description": "Persistent, hashed, opaque, replicable, binary key/content, addressable, storage",
   "license": "BSD-2-Clause",
   "author": "Shane Holloway <shane.holloway@ieee.org>",
@@ -18,13 +18,21 @@
     "esm/",
     "umd/"
   ],
+  "type": "module",
+  "main": "./cjs/index.cjs",
+  "module": "./esm/index.mjs",
+  "browser": "./umd/index.js",
+  "exports": {
+    "import": "./esm/index.mjs",
+    "require": "./cjs/index.cjs"
+  },
   "dependencies": {},
   "devDependencies": {
     "@rollup/plugin-node-resolve": "^7.1.1",
     "cbor-codec": "^0.1.2",
     "rollup": "^1.31.1",
     "rollup-plugin-jsy-lite": "^1.5.1",
-    "u8-utils": "^0.3.1"
+    "u8-utils": "^0.3.2"
   },
   "scripts": {
     "clean": "rm -rf ./cjs/* ./esm/* ./umd/*",

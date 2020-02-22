@@ -1,0 +1,62 @@
+import {utf8_to_u8} from 'u8-utils'
+import keyctx_proto from './keyctx.jsy'
+
+const opaque_proto = @{}
+  keyctx_proto: keyctx_proto
+  cipher: keyctx_proto.cipher
+  kdf_secret: abstract_kdf
+  kdf_public: abstract_kdf
+
+  with_ctx({storage, cipher, ...rest}) ::
+    if ! cipher :: cipher = this.cipher
+    return @{}
+      __proto__: this
+      keyctx_proto: this.keyctx_proto.with_ctx @: storage, cipher
+      cipher, ...rest
+
+  async from_content(raw_content) ::
+    raw_content = await _u8content(raw_content)
+    return this.from_key_content @ raw_content, raw_content
+
+  async from_key_content(key_material, raw_content) ::
+    key_material = await _u8arr(key_material)
+    const key_secret = await this.kdf_secret(key_material)
+    return this.from_key @ key_secret, raw_content
+
+  async from_key(key_secret, raw_content) ::
+    key_secret = await _u8arr(key_secret)
+    const key_public = await this.kdf_public(key_secret)
+    const keyctx = @{} __proto__: this.keyctx_proto, key_public, key_secret
+
+    if undefined !== raw_content ::
+      raw_content = await _u8content(raw_content)
+      keyctx.remember(raw_content)
+    return keyctx
+
+
+async function _u8content(val) ::
+  if null !== val && undefined !== val && ! @ val instanceof Uint8Array ::
+    if val.then :: val = await val
+    if ! @ val instanceof Uint8Array ::
+      if 'string' !== typeof val ::
+        val = new Uint8Array @ val
+      else val = utf8_to_u8(val)
+  return val
+
+async function _u8arr(val) ::
+  if null !== val && undefined !== val ::
+    if val.then :: val = await val
+    if ! @ val instanceof Uint8Array ::
+      val = new Uint8Array @ val
+  return val
+
+function abstract_kdf(u8_to_hash) ::
+  throw new Error @ 'Use concrete key derivation function like sha_256'
+
+
+
+export ::
+  opaque_proto,
+  opaque_proto as opaque,
+  opaque_proto as default,
+
