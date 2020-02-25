@@ -11,21 +11,24 @@ export async function hamt_add_key(chain, hamt_node, key_public) ::
   const current = tip_amt[ki]
 
   if undefined === current ::
+    // no existing entry; replace empty entry
     return hamt_replace_at @
       chain, hamt_node, ki,
       key_public
 
-  else if Array.isArray(current) ::
-    // existing TRIE node
+  else if 1 === current.length && Array.isArray(current) ::
+    // existing TRIE node, denoted by being a single-item Array of [hamt_key_secret]
     const cur_child_node = await hamt_node.fetch(current[0])
     const new_child_node = await hamt_add_key @
       chain, cur_child_node, key_public
 
-    if cur_child_node !== new_child_node ::
-      return hamt_replace_at @
-        chain, hamt_node, ki,
-        [await new_child_node.key_secret()]
-    else return hamt_node
+    if cur_child_node === new_child_node ::
+      // unchanged child HAMT -- no change required
+      return hamt_node
+
+    return hamt_replace_at @
+      chain, hamt_node, ki,
+      [await new_child_node.key_secret()]
 
   else if vec_equal(hex_key, current) ::
     // existing identical key -- no change required
@@ -51,8 +54,8 @@ function hamt_replace_at(chain, hamt_node, ki, entry) ::
 
 
 function hamt_child_node(chain, hamt_node, tip_h, key_a, key_b) ::
-  let amt=[], idx=vec_longest_prefix(key_a, key_b)
-  let h = key_a.slice(0, idx)
+  const idx=vec_longest_prefix(key_a, key_b)
+  let amt=[], h=key_a.slice(0, idx)
   amt[key_a[idx]] = key_a
   amt[key_b[idx]] = key_b
 
