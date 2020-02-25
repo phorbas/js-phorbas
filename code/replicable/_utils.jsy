@@ -1,0 +1,25 @@
+
+export function vec_equal(va, vb) ::
+  const len = va.length
+  if len !== vb.length ::
+    return false
+
+  for let i=0; i<len; i++ ::
+    if va[i] !== vb[i] ::
+      return false
+  return true
+
+export function vec_prefix(va, vb) ::
+  const len = va.length
+  for let i=0; i<len; i++ ::
+    if va[i] !== vb[i] ::
+      return null
+  return len
+
+export function vec_longest_prefix(va, vb) ::
+  const len = va.length
+  for let i=0; i<len; i++ ::
+    if va[i] !== vb[i] ::
+      return i
+  throw new Error @ 'Invalid longest prefix -- full match'
+

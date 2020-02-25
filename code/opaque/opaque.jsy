@@ -30,7 +30,7 @@ const opaque_proto = @{}
 
     if undefined !== raw_content ::
       raw_content = await _u8content(raw_content)
-      keyctx.remember(raw_content)
+      keyctx.retain(raw_content)
     return keyctx
 
 

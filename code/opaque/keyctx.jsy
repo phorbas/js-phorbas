@@ -28,8 +28,8 @@ const keyctx_proto = @{}
 
   local() :: return _wm_ctx_content.get(this)
   has_local() :: return undefined !== _wm_ctx_content.get(this)
-  remember(raw_content) :: _wm_ctx_content.set(this, raw_content); return this
-  forget() :: _wm_ctx_content.delete(this); return this
+  retain(raw_content) :: _wm_ctx_content.set(this, raw_content); return this
+  free() :: _wm_ctx_content.delete(this); return this
 
   async store() ::
     const raw_content = this.local()
@@ -53,7 +53,7 @@ const keyctx_proto = @{}
       return raw_content
 
     const p = this._do_fetch()
-    this.remember(p)
+    this.retain(p)
     return p
 
   async _do_fetch() ::
@@ -66,7 +66,7 @@ const keyctx_proto = @{}
       await this.kdf_cipher(key_secret)
       await this.kdf_iv(key_public)
 
-    this.remember(raw_content)
+    this.retain(raw_content)
     return raw_content
 
 

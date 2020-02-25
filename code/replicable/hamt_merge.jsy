@@ -1,0 +1,16 @@
+import { vec_prefix } from './_utils.jsy'
+
+export default hamt_merge
+export async function hamt_merge(chain, hamt_node, hamt_other) ::
+
+/*
+  async merge_hamt({h: o_h, amt: o_amt}) ::
+    const {h:s_h, amt:s_amt} = this
+    const idx = vec_prefix(s_h, o_h)
+    if null === idx ::
+      throw new Error @ 'Unrelated HAMT hash prefixes'
+
+    return idx === o_h.length
+      ? merge_hamt_matched @: s_h, s_amt, o_h, o_amt
+      : merge_hamt_parent @: s_h, s_amt, o_h, o_amt
+*/

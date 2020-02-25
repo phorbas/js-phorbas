@@ -10,14 +10,6 @@ import { poem_lines } from '../poem.jsy'
   import {js_map_store} from 'phorbas/esm/web/index.js'
   import {web_indexdb_store} from 'phorbas/esm/web/index.js'
 
-function memstore() ::
-  const store = new Map()
-  return @{}
-    async store_at(key, enc_content) ::
-      store.set @ key, enc_content
-      return true
-    async fetch_at(key) ::
-      return store.get @ key
 
 describe @ 'poem', @::
   it @ 'basics', @::
