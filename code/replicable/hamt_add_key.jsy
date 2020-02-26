@@ -1,14 +1,12 @@
-import { vec_equal, vec_prefix, vec_longest_prefix } from './_utils.jsy'
+import { vec_equal, vec_prefix, vec_longest_prefix } from './_hamt_vec_utils.jsy'
+import { hamt_replace_at, hamt_child_pair } from './hamt_ops.jsy'
 
 export default hamt_add_key
 export async function hamt_add_key(chain, hamt_node, key_public) ::
-  const {h: tip_h, amt: tip_amt} = hamt_node
-  const idx = vec_prefix(tip_h, key_public)
-  if null === idx ::
-    throw new Error @ 'Unrelated HAMT hash prefixes'
-
+  const {h, amt} = hamt_node
+  const idx = vec_prefix(h, key_public)
   const ki = key_public[idx]
-  const current = tip_amt[ki]
+  const current = amt[ki]
 
   if undefined === current ::
     // no existing entry; replace empty entry
@@ -16,7 +14,7 @@ export async function hamt_add_key(chain, hamt_node, key_public) ::
       chain, hamt_node, ki,
       key_public
 
-  else if 1 === current.length && Array.isArray(current) ::
+  else if Array.isArray(current) ::
     // existing TRIE node, denoted by being a single-item Array of [hamt_key_secret]
     const cur_child_node = await hamt_node.fetch(current[0])
     const new_child_node = await hamt_add_key @
@@ -36,41 +34,10 @@ export async function hamt_add_key(chain, hamt_node, key_public) ::
 
   else ::
     // existing but different key
-    const new_child_node = hamt_child_tree @
-      chain, hamt_node, tip_h, current, key_public
+    const new_child_node = hamt_child_pair @
+      chain, hamt_node, h, current, key_public
 
     return hamt_replace_at @
       chain, hamt_node, ki,
       [await new_child_node.key_secret()]
-
-
-function hamt_replace_at(chain, hamt_node, ki, entry) ::
-  let {h, amt} = hamt_node
-  amt = amt.slice()
-  amt[ki] = entry
-  const node = hamt_node.new_hamt @: h, amt
-  chain.push(node)
-  return node
-
-
-function hamt_child_node(chain, hamt_node, tip_h, key_a, key_b) ::
-  const idx=vec_longest_prefix(key_a, key_b)
-  let amt=[], h=key_a.slice(0, idx)
-  amt[key_a[idx]] = key_a
-  amt[key_b[idx]] = key_b
-
-  // create the "deepest" HAMT node
-  let node = hamt_node.new_hamt @: h, amt
-  chain.push(node)
-
-  // build the middle HAMT nodes between the tip_h parent and the deepest HAMT node
-  const len_done = 1 + tip_h.length
-  while len_done < h.length ::
-    const ki = h[h.length - 1]
-    h = h.slice(0, -1)
-    amt = []; amt[ki] = node
-    node = hamt_node.new_hamt @: h, amt
-    chain.push(node)
-
-  return node
 

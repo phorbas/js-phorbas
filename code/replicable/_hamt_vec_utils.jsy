@@ -13,7 +13,7 @@ export function vec_prefix(va, vb) ::
   const len = va.length
   for let i=0; i<len; i++ ::
     if va[i] !== vb[i] ::
-      return null
+      throw new Error @ 'Prefix unrelated'
   return len
 
 export function vec_longest_prefix(va, vb) ::

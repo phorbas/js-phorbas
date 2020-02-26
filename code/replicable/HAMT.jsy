@@ -17,6 +17,8 @@ export function phorbas_hamt(opaque) ::
       __proto__: _hamt_node_.__base__
       h, amt
 
+    async key_public() ::
+      return (await this.keyctx()).key_public
     async key_secret() ::
       return (await this.keyctx()).key_secret
     async keyctx(hamt_key_secret) ::
@@ -25,6 +27,7 @@ export function phorbas_hamt(opaque) ::
         keyctx = undefined !== hamt_key_secret
           ? opaque.from_key(hamt_key_secret)
           : opaque.from_content(this.encode())
+
         _wm_keyctx.set(this, keyctx)
         keyctx = await keyctx
         _wm_keyctx.set(this, keyctx)
@@ -75,6 +78,7 @@ const hamt_api_proto = @{}
   async merge(hamt_other) ::
     const chain = []
     const root = await hamt_merge @ chain, this.root, hamt_other.root || hamt_other
+    // TODO: fetch all non-present entries discovered during merge
     await this._store_chain(chain)
     return this.with_root(root)
 
