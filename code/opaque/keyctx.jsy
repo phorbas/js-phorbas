@@ -31,18 +31,36 @@ const keyctx_proto = @{}
   retain(raw_content) :: _wm_ctx_content.set(this, raw_content); return this
   free() :: _wm_ctx_content.delete(this); return this
 
-  async store() ::
+  async as_kv_pair() ::
+    return @[] this.key_store, await this.encipher_content()
+
+  async encipher_content() ::
     const raw_content = this.local()
     if undefined === raw_content ::
       throw new Error('No associated raw_content')
 
-    const {key_secret, key_public, key_store, cipher, storage} = this
+    const {key_secret, key_public, cipher} = this
     const enc_content = await cipher.encrypt @ raw_content,
       await this.kdf_cipher(key_secret)
       await this.kdf_iv(key_public)
+    return enc_content
 
-    await storage.store_at(key_store, enc_content)
+  async decipher_content(enc_content) ::
+    const {key_secret, key_public, cipher} = this
+    const raw_content = await cipher.decrypt @ enc_content,
+      await this.kdf_cipher(key_secret)
+      await this.kdf_iv(key_public)
+
+    this.retain(raw_content)
+    return raw_content
+
+  async store() ::
+    await this.storage.store_at @
+      this.key_store, await this.encipher_content()
     return this
+
+  exists() ::
+    return this.storage.exists_at @ this.key_store
 
   fetch_utf8() ::
     return this.fetch().then(u8_to_utf8)
@@ -57,17 +75,10 @@ const keyctx_proto = @{}
     return p
 
   async _do_fetch() ::
-    const {key_secret, key_public, key_store, cipher, storage} = this
-    const enc_content = await storage.fetch_at(key_store)
-    if ! enc_content instanceof Uint8Array ::
-      return enc_content
-
-    const raw_content = await cipher.decrypt @ enc_content,
-      await this.kdf_cipher(key_secret)
-      await this.kdf_iv(key_public)
-
-    this.retain(raw_content)
-    return raw_content
+    const enc_content = await this.storage.fetch_at @ this.key_store
+    return enc_content instanceof Uint8Array
+      ? this.decipher_content(enc_content)
+      : enc_content
 
 
 

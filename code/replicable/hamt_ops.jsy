@@ -16,17 +16,16 @@ export function hamt_child_single(chain, hamt_node, tip_h, key) ::
 
   let node = hamt_node.new_hamt @: h, amt
   chain.push(node)
-
   return node
 
 export function hamt_child_pair(chain, hamt_node, tip_h, key_a, key_b) ::
   const idx = vec_longest_prefix(key_a, key_b)
-  let amt=[], h=key_a.slice(0, idx)
+  const amt=[], h=key_a.slice(0, idx)
   amt[key_a[idx]] = key_a
   amt[key_b[idx]] = key_b
 
   // create the "deepest" HAMT node
-  let node = hamt_node.new_hamt @: h, amt
+  const node = hamt_node.new_hamt @: h, amt
   chain.push(node)
 
   return hamt_inner_tree @ chain, tip_h, node

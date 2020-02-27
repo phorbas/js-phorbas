@@ -17,12 +17,43 @@ export async function web_indexdb_store(db_name='phorbas', store_name='kv') ::
       kv.put @ enc_content, key
       await txn_done
       return true
+    async batch_store(kv_pairs) ::
+      const {kv, txn_done} = txn_rw()
+
+      for const [key, enc_content] of kv_pairs ::
+        kv.put @ enc_content, key
+
+      await txn_done
+      return true
+
 
     async fetch_at(key) ::
       const {kv, txn_done} = txn_ro()
-      const ans = idb_req @ kv.get(key)
+      const ans = kv.get(key)
       await txn_done
-      return await ans
+      return ans.result
+    async batch_fetch(keys) ::
+      const {kv, txn_done} = txn_ro()
+
+      const ans = keys.map @
+        k => kv.get(k)
+
+      await txn_done
+      return ans.map @ v => v.result
+
+
+    async exists_at(key) ::
+      const {kv, txn_done} = txn_ro()
+      const ans = kv.count(key)
+      await txn_done
+      return 0 | ans.result
+    async batch_exists(keys) ::
+      const {kv, txn_done} = txn_ro()
+
+      const ans = keys.map @
+        k => kv.count(k)
+      await txn_done
+      return ans.map @ v => 0 | v.result
 
 
 function with_idb_store_ctx(idb, store_name) ::

@@ -5,6 +5,8 @@ export ::
 
 export async function js_map_store() ::
   const _db = new Map()
+  const _db_has = key => 0 | _db.has @ key
+  const _db_get = key => _db.get @ key
 
   return @{}
     uses_binary_key: false
@@ -12,7 +14,17 @@ export async function js_map_store() ::
     async store_at(key, enc_content) ::
       _db.set @ key, enc_content
       return true
+    async batch_store(kv_pairs) ::
+      for const [key, enc_content] of kv_pairs ::
+        _db.set @ key, enc_content
+      return true
 
     async fetch_at(key) ::
       return _db.get @ key
+    async batch_fetch(keys) ::
+      return keys.map @ _db_get
 
+    async exists_at(key) ::
+      return 0 | _db.has @ key
+    async batch_exists(keys) ::
+      return keys.map @ _db_has
