@@ -1,2 +1,3 @@
 import './unit/smoke.jsy'
 import './unit/poem.jsy'
+import './unit/hamt_poem.jsy'

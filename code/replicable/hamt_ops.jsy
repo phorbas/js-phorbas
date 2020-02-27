@@ -1,3 +1,4 @@
+import { vec_longest_prefix } from './_hamt_vec_utils.jsy'
 
 export function hamt_replace_at(chain, hamt_node, ki, entry) ::
   let {h, amt} = hamt_node
@@ -33,6 +34,7 @@ export function hamt_child_pair(chain, hamt_node, tip_h, key_a, key_b) ::
 export function hamt_inner_tree(chain, tip_h, inner_node) ::
   // build the middle HAMT nodes between the tip_h parent and the deepest HAMT inner_node
   const len_done = 1 + tip_h.length
+  let h = inner_node.h
   while len_done < h.length ::
     const ki = h[h.length - 1]
     h = h.slice(0, -1)

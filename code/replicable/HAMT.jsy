@@ -17,15 +17,13 @@ export function phorbas_hamt(opaque) ::
       __proto__: _hamt_node_.__base__
       h, amt
 
-    async key_public() ::
-      return (await this.keyctx()).key_public
-    async key_secret() ::
+    async hamt_key() ::
       return (await this.keyctx()).key_secret
-    async keyctx(hamt_key_secret) ::
+    async keyctx(hamt_key) ::
       let keyctx = _wm_keyctx.get(this)
       if undefined === keyctx ::
-        keyctx = undefined !== hamt_key_secret
-          ? opaque.from_key(hamt_key_secret)
+        keyctx = undefined !== hamt_key
+          ? opaque.from_key(hamt_key)
           : opaque.from_content(this.encode())
 
         _wm_keyctx.set(this, keyctx)
@@ -33,8 +31,8 @@ export function phorbas_hamt(opaque) ::
         _wm_keyctx.set(this, keyctx)
       return keyctx
 
-    async fetch(hamt_key_secret) ::
-      const keyctx = await this.keyctx(hamt_key_secret)
+    async fetch(hamt_key) ::
+      const keyctx = await this.keyctx(hamt_key)
       const res = await keyctx.fetch()
       return res ? this.decode(res) : res
     async store() ::
@@ -45,12 +43,14 @@ export function phorbas_hamt(opaque) ::
 
   const _hamt_api_ = @{}
     __proto__: hamt_api_proto, _hamt_node_
-    with_root: root => @: __proto__: _hamt_api_.__base__, root
+    with_root(root) ::
+      return root === this.root ? this :
+        @{} __proto__: _hamt_api_.__base__, root
  
   _hamt_node_.__base__ = _hamt_node_
   _hamt_api_.__base__ = _hamt_api_
 
-  return _hamt_api_.with_root(undefined)
+  return _hamt_api_.with_root(null)
 
 
 const hamt_api_proto = @{}
@@ -58,26 +58,34 @@ const hamt_api_proto = @{}
 
   new_root() ::
     return this.with_root @
-      this._hamt_.new_hamt @:
+      this._hamt_node_.new_hamt @:
         h: new Uint8Array(0), amt: []
 
   async load_root(hamt_key) ::
     return this.with_root @
-      await this._hamt_.fetch(hamt_key)
+      await this._hamt_node_.fetch(hamt_key)
 
   async _store_chain(chain) ::
     for const ea of chain ::
       await ea.store()
 
-  async add_key(key_public) ::
+  async add_key(keyctx) ::
+    return this.add_key_u8 @
+      await (await keyctx).key_public
+
+  async add_key_u8(key_public) ::
     const chain = []
     const root = await hamt_add_key @ chain, this.root, key_public
     await this._store_chain(chain)
     return this.with_root(root)
 
   async merge(hamt_other) ::
+    if undefined === this.root ::
+      return this.with_root(hamt_other)
+
     const chain = []
     const root = await hamt_merge @ chain, this.root, hamt_other.root || hamt_other
+
     // TODO: fetch all non-present entries discovered during merge
     await this._store_chain(chain)
     return this.with_root(root)

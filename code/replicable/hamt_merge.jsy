@@ -18,7 +18,7 @@ export async function hamt_merge(chain, hamt_a, hamt_b) ::
     const join_tree = hamt_inner_tree @ chain, h_a, hamt_b
     return hamt_replace_at @
       chain, hamt_a, ki,
-      [await join_tree.key_secret()]
+      [await join_tree.hamt_key()]
 
   else if Array.isArray(current) ::
     const cur_child_node = await hamt_a.fetch(current[0])
@@ -31,7 +31,7 @@ export async function hamt_merge(chain, hamt_a, hamt_b) ::
 
     return hamt_replace_at @
       chain, hamt_a, ki,
-      [await new_child_node.key_secret()]
+      [await new_child_node.hamt_key()]
 
   else ::
     // create node for existing entry and recursively merge
@@ -40,7 +40,7 @@ export async function hamt_merge(chain, hamt_a, hamt_b) ::
 
     return hamt_replace_at @
       chain, hamt_a, ki,
-      [await join_tree.key_secret()]
+      [await join_tree.hamt_key()]
 
 
 

@@ -1,4 +1,4 @@
-import { vec_equal, vec_prefix, vec_longest_prefix } from './_hamt_vec_utils.jsy'
+import { vec_equal, vec_prefix } from './_hamt_vec_utils.jsy'
 import { hamt_replace_at, hamt_child_pair } from './hamt_ops.jsy'
 
 export default hamt_add_key
@@ -15,7 +15,7 @@ export async function hamt_add_key(chain, hamt_node, key_public) ::
       key_public
 
   else if Array.isArray(current) ::
-    // existing TRIE node, denoted by being a single-item Array of [hamt_key_secret]
+    // existing TRIE node, denoted by being a single-item Array of [hamt_key]
     const cur_child_node = await hamt_node.fetch(current[0])
     const new_child_node = await hamt_add_key @
       chain, cur_child_node, key_public
@@ -26,9 +26,9 @@ export async function hamt_add_key(chain, hamt_node, key_public) ::
 
     return hamt_replace_at @
       chain, hamt_node, ki,
-      [await new_child_node.key_secret()]
+      [await new_child_node.hamt_key()]
 
-  else if vec_equal(hex_key, current) ::
+  else if vec_equal(current, key_public) ::
     // existing identical key -- no change required
     return hamt_node
 
@@ -39,5 +39,5 @@ export async function hamt_add_key(chain, hamt_node, key_public) ::
 
     return hamt_replace_at @
       chain, hamt_node, ki,
-      [await new_child_node.key_secret()]
+      [await new_child_node.hamt_key()]
 

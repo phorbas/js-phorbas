@@ -16,32 +16,25 @@ describe @ 'poem', @::
     expect(poem_lines.length).to.be.at.least(2)
 
   it @ 'with js_map_store', @::>
-    const tahoe = tahoe_opaque.with_ctx @:
-      storage: await js_map_store()
-      //storage: await web_idb_store()
-
-    for const line of poem_lines ::
-      const kctx = await tahoe.from_content(line)
-      const ans = await kctx.store()
-
-      const kctx2 = await tahoe.from_key(kctx.key_secret)
-      const rt = await kctx2.fetch_utf8()
-
-      expect(rt).to.be.equal(line)
+    await test_poem @
+      tahoe_opaque.with_ctx @:
+        storage: await js_map_store()
 
   #IF PLAT_WEB
     it @ 'with web_indexdb_store', async function() ::
-      const tahoe = tahoe_opaque.with_ctx @:
-        storage: await web_indexdb_store()
-
-      for const line of poem_lines ::
-        const kctx = await tahoe.from_content(line)
-        const ans = await kctx.store()
-
-        const kctx2 = await tahoe.from_key(kctx.key_secret)
-        const rt = await kctx2.fetch_utf8()
-
-        expect(rt).to.be.equal(line)
+      await test_poem @
+        tahoe_opaque.with_ctx @:
+          storage: await web_indexdb_store()
 
   ;
 
+
+async function test_poem(tahoe) ::
+  for const line of poem_lines ::
+    const kctx = await tahoe.from_content(line)
+    const ans = await kctx.store()
+
+    const kctx2 = await tahoe.from_key(kctx.key_secret)
+    const rt = await kctx2.fetch_utf8()
+
+    expect(rt).to.be.equal(line)

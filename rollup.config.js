@@ -26,12 +26,11 @@ const plugins_web = [
 /// const plugins_min = plugins_web.concat([ rpi_terser({}) ])
 
 
-add_jsy('index', pkg_name)
-//add_jsy('other module')
+add_jsy('index', {module_name: pkg_name})
 
 
-function add_jsy(src_name, module_name) {
-  if (!module_name) module_name = `${pkg_name}_${src_name}`
+function add_jsy(src_name, opt={}) {
+  let module_name = opt.module_name || `${pkg_name}_${src_name}`
 
   if (plugins_nodejs)
     configs.push({
