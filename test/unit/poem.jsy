@@ -49,25 +49,29 @@ async function test_poem(opaque) ::
     expect(rt).to.be.equal(line)
 
 async function test_poem_with_index(opaque) ::
-  let poem_ref
+  const poem_ref = await
+    store_poem_with_index @ opaque
 
-  ::
-    const poem_index = []
-    for const line of poem_lines ::
-      const kctx = await opaque.store(line)
-      poem_index.push(kctx.key_secret)
+  await validate_poem_with_index @
+    opaque, poem_ref
 
-    const kctx = await opaque.store @
-      cbor_encode @ poem_index
-    poem_ref = kctx.key_secret
+async function store_poem_with_index(opaque) ::
+  const poem_index = []
+  for const line of poem_lines ::
+    const kctx = await opaque.store(line)
+    poem_index.push(kctx.key_secret)
 
-  ::
-    const poem_index = cbor_decode @
-      await opaque.fetch @ poem_ref
+  const kctx = await opaque.store @
+    cbor_encode @ poem_index
+  return kctx.key_ref
 
-    const rt_lines = await Promise.all @
-      poem_index.map @ ref =>
-        opaque.fetch_utf8(ref)
+async function validate_poem_with_index(opaque, poem_ref) ::
+  const poem_index = cbor_decode @
+    await opaque.fetch @ poem_ref
 
-    assert.deepEqual @ rt_lines, poem_lines
+  const rt_lines = await Promise.all @
+    poem_index.map @ ref =>
+      opaque.fetch_utf8(ref)
+
+  assert.deepEqual @ rt_lines, poem_lines
 

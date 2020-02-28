@@ -40,9 +40,9 @@ const opaque_proto = @{}
   async fetch_utf8(key_secret) ::
     const keyctx = await this.from_key(key_secret)
     return keyctx.fetch_utf8()
-  async store(raw_content) ::
-    const keyctx = await this.from_content(raw_content)
-    return keyctx.store()
+  async store(...args) ::
+    const keyctx = await this.from_content(args.pop())
+    return keyctx.store(args.pop())
 
 
 async function _u8content(val) ::

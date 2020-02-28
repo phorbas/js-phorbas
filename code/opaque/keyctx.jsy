@@ -1,7 +1,6 @@
 import js_map_store from '../store/js_map.jsy'
 import {u8_to_hex, u8_to_utf8} from 'u8-utils'
 
-const _wm_key_hex = new WeakMap()
 const _wm_ctx_content = new WeakMap()
 
 const keyctx_proto = @{}
@@ -17,7 +16,7 @@ const keyctx_proto = @{}
 
     if storage && storage !== this.storage ::
       props.storage = @{} value: storage
-      props.key_store = @{} get:
+      props.key_loc = @{} get:
         storage.uses_binary_key
           ? _get_binary_key
           : _get_hex_key
@@ -25,15 +24,13 @@ const keyctx_proto = @{}
     return Object.create @ this, props
 
 
-  hex_key: _get_hex_key
-
   local() :: return _wm_ctx_content.get(this)
   has_local() :: return undefined !== _wm_ctx_content.get(this)
   retain(raw_content) :: _wm_ctx_content.set(this, raw_content); return this
   free() :: _wm_ctx_content.delete(this); return this
 
   async as_store_pair() ::
-    return @[] this.key_store, await this.encipher_content()
+    return @[] this.key_loc, await this.encipher_content()
 
   async encipher_content() ::
     const raw_content = this.local()
@@ -55,13 +52,16 @@ const keyctx_proto = @{}
     this.retain(raw_content)
     return raw_content
 
-  async store() ::
+  async store(attr) ::
     await this.storage.store_at @
-      this.key_store, await this.encipher_content()
-    return this
+      this.key_loc, await this.encipher_content()
+    return this.as_attr(attr)
+
+  async as_attr(attr) ::
+    return ! attr ? this : this[attr]
 
   exists() ::
-    return this.storage.exists_at @ this.key_store
+    return this.storage.exists_at @ this.key_loc
 
   fetch_utf8() ::
     return this.fetch().then(u8_to_utf8)
@@ -76,13 +76,14 @@ const keyctx_proto = @{}
     return p
 
   async _do_fetch() ::
-    const enc_content = await this.storage.fetch_at @ this.key_store
+    const enc_content = await this.storage.fetch_at @ this.key_loc
     return enc_content instanceof Uint8Array
       ? this.decipher_content(enc_content)
       : enc_content
 
 
 
+const _wm_key_hex = new WeakMap()
 function _get_hex_key() ::
   const {key_public} = this
   let r = _wm_key_hex.get(key_public)
@@ -90,8 +91,14 @@ function _get_hex_key() ::
     _wm_key_hex.set @ key_public, r = u8_to_hex(key_public)
   return r
 
-function _get_binary_key() ::
-  return this.key_public
+function _get_binary_key() :: return this.key_public
+function _get_reference_key() :: return this.key_secret
+
+Object.defineProperties @ keyctx_proto, @{}
+  key_loc_bin: @{} get: _get_binary_key
+  key_loc_bin: @{} get: _get_hex_key
+  key_ref: @{} get: _get_reference_key
+
 
 function abstract_cipher() ::
   const warn = v => @
