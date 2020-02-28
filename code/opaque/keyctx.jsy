@@ -1,3 +1,4 @@
+import js_map_store from '../store/js_map.jsy'
 import {u8_to_hex, u8_to_utf8} from 'u8-utils'
 
 const _wm_key_hex = new WeakMap()
@@ -5,7 +6,7 @@ const _wm_ctx_content = new WeakMap()
 
 const keyctx_proto = @{}
   cipher: abstract_cipher()
-  storage: abstract_storage()
+  storage: js_map_store()
   kdf_cipher: key_secret => key_secret
   kdf_iv: key_public => key_public
 
@@ -31,7 +32,7 @@ const keyctx_proto = @{}
   retain(raw_content) :: _wm_ctx_content.set(this, raw_content); return this
   free() :: _wm_ctx_content.delete(this); return this
 
-  async as_kv_pair() ::
+  async as_store_pair() ::
     return @[] this.key_store, await this.encipher_content()
 
   async encipher_content() ::
@@ -102,19 +103,6 @@ function abstract_cipher() ::
       return warn @ raw_content
     async decrypt(enc_content, key_secret, key_public) ::
       return warn @ enc_content
-
-function abstract_storage() ::
-  const warn = v => @
-    console.warn @ 'Use a concrete storage implementation'
-    v
-
-  return @{}
-    async store_at(key_store, enc_content) ::
-      return warn()
-    async fetch_at(key_store) ::
-      return warn()
-
-
 
 export ::
   keyctx_proto,

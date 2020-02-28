@@ -1,14 +1,19 @@
 import { cbor_decode, cbor_encode } from 'cbor-codec'
+import { vec_equal } from './_hamt_vec_utils.jsy'
 
 import hamt_add_key from './hamt_add_key.jsy'
 import hamt_merge from './hamt_merge.jsy'
 
+
+const _map_noop = @{} get(){}
 export function phorbas_hamt(opaque) ::
   const _wm_u8 = new WeakMap()
   const _wm_keyctx = new WeakMap()
+  const _wm_deps = new WeakMap()
 
   const _hamt_node_ = @{}
     __proto__: hamt_node_proto
+    get opaque() :: return opaque
     u8_local() :: return _wm_u8.get(this)
     u8_retain(u8) :: _wm_u8.set(this, u8); return this
     u8_free() :: _wm_u8.delete(this); return this
@@ -17,8 +22,21 @@ export function phorbas_hamt(opaque) ::
       __proto__: _hamt_node_.__base__
       h, amt
 
-    async hamt_key() ::
-      return (await this.keyctx()).key_secret
+    dep_at(ki) :: return (_wm_deps.get(this) || _map_noop).get(ki)
+    local_deps() :: return _wm_deps.get(this)
+    deps_from(...args) ::
+      const deps = new Map()
+      for let each of args.filter(Boolean) ::
+        each = undefined !== each.hamt_key
+          ? _wm_deps.get(each) || [] : each
+
+        for const [ki, inner] of each ::
+          deps.set(ki, inner)
+
+      _wm_deps.set(this, deps)
+      return this
+
+
     async keyctx(hamt_key) ::
       let keyctx = _wm_keyctx.get(this)
       if undefined === keyctx ::
@@ -31,17 +49,6 @@ export function phorbas_hamt(opaque) ::
         _wm_keyctx.set(this, keyctx)
       return keyctx
 
-    async exists(hamt_key) ::
-      const keyctx = await this.keyctx(hamt_key)
-      return await keyctx.exists()
-    async fetch(hamt_key) ::
-      const keyctx = await this.keyctx(hamt_key)
-      const res = await keyctx.fetch()
-      return res ? this.decode(res) : res
-    async store() ::
-      const keyctx = await this.keyctx()
-      await keyctx.store()
-      return this
 
 
   const _hamt_ = @{}
@@ -68,30 +75,30 @@ const hamt_proto = @{}
     return this.with_root @
       await this._hamt_node_.fetch(hamt_key)
 
-  async _store_chain(chain) ::
-    for const ea of chain ::
-      await ea.store()
+  async store_root() ::
+    const {root} = this
+    await root.opaque.storage.batch_store @
+      iter_store_pairs @ root
+    return this
 
-  async add_key(keyctx) ::
+  async add_keyctx(keyctx) ::
     return this.add_key_u8 @
       await (await keyctx).key_public
 
   async add_key_u8(key_public) ::
-    const chain = []
-    const root = await hamt_add_key @ chain, this.root, key_public
-    await this._store_chain(chain)
-    return this.with_root(root)
+    const root = await hamt_add_key @ this.root, key_public
+    return this.with_root @ await root
 
   async merge(hamt_other) ::
     if undefined === this.root ::
       return this.with_root(hamt_other)
 
-    const chain = []
-    const root = await hamt_merge @ chain, this.root, hamt_other.root || hamt_other
+    const root = await hamt_merge @ this.root, hamt_other.root || hamt_other
 
     // TODO: fetch all non-present entries discovered during merge
-    await this._store_chain(chain)
     return this.with_root(root)
+
+hamt_proto.add = hamt_proto.add_key = hamt_proto.add_keyctx
 
 
 const hamt_node_proto = @{}
@@ -107,4 +114,35 @@ const hamt_node_proto = @{}
 
   decode(u8) ::
     return this.new_hamt(cbor_decode(u8)).u8_retain(u8)
+
+  async hamt_key() ::
+    return (await this.keyctx()).key_secret
+  async exists(hamt_key) ::
+    const keyctx = await this.keyctx(hamt_key)
+    return await keyctx.exists()
+
+  async fetch_dep(ki, [hamt_key]) ::
+    const dep = this.dep_at(ki, hamt_key)
+    if undefined !== dep ::
+      if vec_equal @ hamt_key, await dep.hamt_key() ::
+        return dep
+    return this.fetch(hamt_key)
+
+  async fetch(hamt_key) ::
+    const keyctx = await this.keyctx(hamt_key)
+    const res = await keyctx.fetch()
+    return res ? this.decode(res) : res
+
+  *iter_dependency_tree() ::
+    const children = this.local_deps()
+    if undefined !== children ::
+      for const [ki, inner] of children ::
+        yield * inner.iter_dependency_tree()
+    yield this
+
+
+function _as_store_pair(kx) :: return kx.as_store_pair()
+function * iter_store_pairs(hamt_root) ::
+  for const node of hamt_root.iter_dependency_tree() ::
+    yield node.keyctx().then @ _as_store_pair
 

@@ -15,16 +15,24 @@ export async function js_map_store() ::
       _db.set @ key, enc_content
       return true
     async batch_store(kv_pairs) ::
-      for const [key, enc_content] of kv_pairs ::
+      for const pair of kv_pairs ::
+        const [key, enc_content] = await pair
         _db.set @ key, enc_content
       return true
 
     async fetch_at(key) ::
       return _db.get @ key
     async batch_fetch(keys) ::
-      return keys.map @ _db_get
+      const ans = []
+      for const k of keys ::
+        ans.push @ _db.get @ await k
+      return ans
 
     async exists_at(key) ::
       return 0 | _db.has @ key
     async batch_exists(keys) ::
-      return keys.map @ _db_has
+      const ans = []
+      for const k of keys ::
+        ans.push @ _db.has @ await k
+      return ans
+

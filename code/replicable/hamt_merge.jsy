@@ -1,73 +1,76 @@
-import { vec_prefix } from './_hamt_vec_utils.jsy'
+import { vec_equal, vec_prefix } from './_hamt_vec_utils.jsy'
 import { hamt_add_key } from './hamt_add_key.jsy'
 import { hamt_replace_at, hamt_child_single, hamt_child_pair, hamt_inner_tree } from './hamt_ops.jsy'
 
 
 export default hamt_merge
-export async function hamt_merge(chain, hamt_a, hamt_b) ::
+export async function hamt_merge(hamt_a, hamt_b) ::
   const {h: h_a} = hamt_a, {h: h_b} = hamt_b
   const idx = vec_prefix(h_a, h_b)
   const ki = h_b[idx]
 
   if undefined === ki ::
-    return hamt_merge_peers(chain, hamt_a, hamt_b)
+    return hamt_merge_peers @ hamt_a, hamt_b
 
   const current = hamt_a.amt[ki]
   if undefined === current ::
     // create inner tree and merge
-    const join_tree = hamt_inner_tree @ chain, h_a, hamt_b
+    const join_tree = hamt_inner_tree @ h_a, hamt_b
     return hamt_replace_at @
-      chain, hamt_a, ki,
+      hamt_a, ki,
       [await join_tree.hamt_key()]
+      [[ki, join_tree]]
 
   else if Array.isArray(current) ::
-    const cur_child_node = await hamt_a.fetch(current[0])
+    const cur_child_node = await hamt_a.fetch_dep(ki, current)
     const new_child_node = await hamt_merge @
-      chain, cur_child_node, hamt_b
+      cur_child_node, hamt_b
 
     if cur_child_node === new_child_node ::
       // unchanged child HAMT -- no change required
       return hamt_a
 
     return hamt_replace_at @
-      chain, hamt_a, ki,
+      hamt_a, ki,
       [await new_child_node.hamt_key()]
+      [[ki, new_child_node]]
 
   else ::
     // create node for existing entry and recursively merge
     const child_node = hamt_child_single @ [], hamt_a, h_a, current
-    const join_tree = await hamt_merge @ chain, child_node, hamt_b
+    const join_tree = await hamt_merge @ child_node, hamt_b
 
     return hamt_replace_at @
-      chain, hamt_a, ki,
+      hamt_a, ki,
       [await join_tree.hamt_key()]
+      [[ki, join_tree]]
 
 
 
 
 const _amt_merge = @{}
-  async 'amt merge 0 0'(chain, hamt_node, e_a, e_b) ::
-    return await hamt_child_pair @ chain,
+  async 'amt merge 0 0'(hamt_node, ki, e_a, e_b) ::
+    return await hamt_child_pair @
       hamt_node, hamt_node.h,
       e_a, e_b
 
-  async 'amt merge 0 1'(chain, hamt_node, e_a, e_b) ::
-    return await hamt_add_key @ chain,
-      await hamt_node.fetch(e_b[0]),
+  async 'amt merge 0 1'(hamt_node, ki, e_a, e_b) ::
+    return await hamt_add_key @
+      await hamt_node.fetch_dep(ki, e_b),
       e_a
 
-  async 'amt merge 1 0'(chain, hamt_node, e_a, e_b) ::
-    return await hamt_add_key @ chain,
-      await hamt_node.fetch(e_a[0]),
+  async 'amt merge 1 0'(hamt_node, ki, e_a, e_b) ::
+    return await hamt_add_key @
+      await hamt_node.fetch_dep(ki, e_a),
       e_b
 
-  async 'amt merge 1 1'(chain, hamt_node, e_a, e_b) ::
-    return await hamt_merge_peers @ chain,
-      await hamt_node.fetch(e_a[0]),
-      await hamt_node.fetch(e_b[0]),
+  async 'amt merge 1 1'(hamt_node, ki, e_a, e_b) ::
+    return await hamt_merge_peers @
+      await hamt_node.fetch_dep(ki, e_a),
+      await hamt_node.fetch_dep(ki, e_b),
 
 
-export async function hamt_merge_peers(chain, hamt_a, hamt_b) ::
+export async function hamt_merge_peers(hamt_a, hamt_b) ::
   const {h: h_a, amt: amt_a} = hamt_a
   const {h: h_b, amt: amt_b} = hamt_b
   if ! vec_equal(h_a, h_b) ::
@@ -76,22 +79,25 @@ export async function hamt_merge_peers(chain, hamt_a, hamt_b) ::
   if vec_equal @ await hamt_a.key_public(), await hamt_b.key_public() ::
     return hamt_a
 
-  let changed = false
+  let changed = false, deps=new Map()
   const h=h_a, amt=amt_a.slice()
-  for const k in amt_b ::
-    const e_b = amt_b[k]
-    if undefined !== e_b ::
-      const e_a = amt_a[k]
-      changed = e_b
-      amt[k] = undefined === e_a ? e_b :
-        await _amt_merge[`amt merge ${0|Array.isArray(e_a)} ${0|Array.isArray(e_b)}`]
-          @ chain, hamt_a, e_a, e_b
+  for const ki in amt_b ::
+    const e_b = amt_b[ki]
+    if undefined === e_b :: continue
 
-  if undefined === changed ::
-    return hamt_a
+    changed = e_b
+    const e_a = amt_a[ki]
+    if undefined === e_a ::
+      amt[ki] = e_b
 
-  else ::
-    const node = hamt_node.new_hamt @: h, amt
-    chain.push(node)
-    return node
+    else ::
+      const fn_merge = _amt_merge[`amt merge ${0|Array.isArray(e_a)} ${0|Array.isArray(e_b)}`]
+      const node = await fn_merge @ hamt_a, ki, e_a, e_b
+      deps.set(ki, node)
+      amt[ki] = [await node.hamt_key()]
+
+  return undefined === changed ? hamt_a
+    : hamt_node
+        .new_hamt @: h, amt
+        .deps_from @ hamt_b, hamt_a, deps
 

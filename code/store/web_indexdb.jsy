@@ -18,8 +18,9 @@ export async function web_indexdb_store(db_name='phorbas', store_name='kv') ::
       await txn_done
       return true
     async batch_store(kv_pairs) ::
+      // IndexDB fails transactions across await boundaries
+      kv_pairs = await Promise.all(kv_pairs)
       const {kv, txn_done} = txn_rw()
-
       for const [key, enc_content] of kv_pairs ::
         kv.put @ enc_content, key
 
@@ -33,13 +34,16 @@ export async function web_indexdb_store(db_name='phorbas', store_name='kv') ::
       await txn_done
       return ans.result
     async batch_fetch(keys) ::
+      // IndexDB fails transactions across await boundaries
+      keys = await Promise.all(keys)
       const {kv, txn_done} = txn_ro()
-
-      const ans = keys.map @
-        k => kv.get(k)
+      for const i in keys ::
+        keys[i] = kv.get @ keys[i]
 
       await txn_done
-      return ans.map @ v => v.result
+      for const i in keys ::
+        keys[i] = keys[i].result
+      return keys
 
 
     async exists_at(key) ::
@@ -48,12 +52,16 @@ export async function web_indexdb_store(db_name='phorbas', store_name='kv') ::
       await txn_done
       return 0 | ans.result
     async batch_exists(keys) ::
+      // IndexDB fails transactions across await boundaries
+      keys = await Promise.all(keys)
       const {kv, txn_done} = txn_ro()
+      for const i in keys ::
+        keys[i] = kv.get @ keys[i]
 
-      const ans = keys.map @
-        k => kv.count(k)
       await txn_done
-      return ans.map @ v => 0 | v.result
+      for const i in keys ::
+        keys[i] = 0 | keys[i].result
+      return keys
 
 
 function with_idb_store_ctx(idb, store_name) ::

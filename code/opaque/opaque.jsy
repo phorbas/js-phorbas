@@ -12,7 +12,7 @@ const opaque_proto = @{}
     return @{}
       __proto__: this
       keyctx_proto: this.keyctx_proto.with_ctx @: storage, cipher
-      cipher, ...rest
+      cipher, storage, ...rest
 
   async from_content(raw_content) ::
     raw_content = await _u8content(raw_content)
@@ -32,6 +32,17 @@ const opaque_proto = @{}
       raw_content = await _u8content(raw_content)
       keyctx.retain(raw_content)
     return keyctx
+
+
+  async fetch(key_secret) ::
+    const keyctx = await this.from_key(key_secret)
+    return keyctx.fetch()
+  async fetch_utf8(key_secret) ::
+    const keyctx = await this.from_key(key_secret)
+    return keyctx.fetch_utf8()
+  async store(raw_content) ::
+    const keyctx = await this.from_content(raw_content)
+    return keyctx.store()
 
 
 async function _u8content(val) ::
