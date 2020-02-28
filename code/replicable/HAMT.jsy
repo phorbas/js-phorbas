@@ -31,6 +31,9 @@ export function phorbas_hamt(opaque) ::
         _wm_keyctx.set(this, keyctx)
       return keyctx
 
+    async exists(hamt_key) ::
+      const keyctx = await this.keyctx(hamt_key)
+      return await keyctx.exists()
     async fetch(hamt_key) ::
       const keyctx = await this.keyctx(hamt_key)
       const res = await keyctx.fetch()
@@ -41,19 +44,19 @@ export function phorbas_hamt(opaque) ::
       return this
 
 
-  const _hamt_api_ = @{}
-    __proto__: hamt_api_proto, _hamt_node_
+  const _hamt_ = @{}
+    __proto__: hamt_proto, _hamt_node_
     with_root(root) ::
       return root === this.root ? this :
-        @{} __proto__: _hamt_api_.__base__, root
+        @{} __proto__: _hamt_.__base__, root
  
   _hamt_node_.__base__ = _hamt_node_
-  _hamt_api_.__base__ = _hamt_api_
+  _hamt_.__base__ = _hamt_
 
-  return _hamt_api_.with_root(null)
+  return _hamt_.with_root(null)
 
 
-const hamt_api_proto = @{}
+const hamt_proto = @{}
   __proto__: null
 
   new_root() ::
