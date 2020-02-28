@@ -14,17 +14,19 @@ import { poem_lines } from '../poem.jsy'
 
 
 describe @ 'hamt poem', @::
-  it @ 'with js_map_store', @::>
-    await test_hamt_poem @
-      tahoe_opaque.with_ctx @:
-        storage: await js_map_store()
+  describe @ 'with js_map_store', @::
+    it @ 'simple HAMT use', @::>
+      await test_hamt_poem @
+        tahoe_opaque.with_ctx @:
+          storage: await js_map_store()
 
 
   #IF PLAT_WEB
-    it @ 'with web_indexdb_store', async function() ::
-      await test_hamt_poem @
-        tahoe_opaque.with_ctx @:
-          storage: await web_indexdb_store()
+    describe @ 'with web_indexdb_store', @::
+      it @ 'simple HAMT use', @::>
+        await test_hamt_poem @
+          tahoe_opaque.with_ctx @:
+            storage: await web_indexdb_store()
 
   ;
 

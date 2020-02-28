@@ -13,9 +13,6 @@ import { poem_lines } from '../poem.jsy'
 
 
 describe @ 'poem', @::
-  it @ 'basics', @::
-    expect(poem_lines.length).to.be.at.least(2)
-
   describe @ 'with js_map_store', @::
     it @ 'simple read after write', @::>
       await test_poem @
