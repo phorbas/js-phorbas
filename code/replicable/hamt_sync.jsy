@@ -1,29 +1,29 @@
 import {u8_to_hex} from 'u8-utils'
 
-export default hamt_sync
-export function hamt_sync(dst_root, src_root, opt={}) ::
+export function hamt_sync_queue(dst_root, src_root, opt={}) ::
   const batch_size = opt.batch_size || 16
   const dst_storage = dst_root.opaque.storage
   const src_storage = src_root.opaque.storage
 
-  const q_node=[], q_leaf=[]
-  const seen = new Set()
-  let active=false, count=0 
+  let active=false, count, q_node, q_leaf
 
   return @{}
+    async prepare_sync() ::
+      await active
+      count = 0
+      q_node = []
+      q_leaf = []
+
     async finish_sync() ::
       await active
-      console.log @ "FINISH:", @{}
-        count, q_node, q_leaf, seen
+      q_node = q_leaf = null
       return count
 
     sync(ref) ::
       const {key_loc} = ref
       if undefined !== key_loc ::
-        //console.log @: sync_node: key_loc, ref
         q_node.push(key_loc)
       else ::
-        //console.log @: sync_leaf: ref
         q_leaf.push(ref)
 
       if false === active ::
@@ -42,17 +42,5 @@ export function hamt_sync(dst_root, src_root, opt={}) ::
         .sync_absent_from @ src_storage, q
 
       count += keys_syncd.length
-
-      ::
-        console.log @: keys_syncd
-        const hex_keys = keys_syncd.map @ e => u8_to_hex(e)
-        console.log @: hex_keys
-        const seen_keys = hex_keys.filter @ e => seen.has(e)
-        console.log @: seen_keys
-        const new_keys = hex_keys.filter @ e => ! seen.has(e)
-        console.log @: new_keys
-        seen.add @ ... new_keys
-        console.log()
-        //console.log @ 'SYNC', @{} count, hex_keys, new_keys, seen_keys
 
     return active = false

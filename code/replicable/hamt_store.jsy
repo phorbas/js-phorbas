@@ -1,4 +1,3 @@
-export default hamt_store
 export async function hamt_store(hamt_root, opt={}) ::
   const batch_size = opt.batch_size || 16
   const {storage} = hamt_root.opaque

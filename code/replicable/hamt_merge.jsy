@@ -4,7 +4,6 @@ import { hamt_replace_at, hamt_child_single, hamt_child_pair, hamt_inner_tree } 
 
 export const sym_hamt_incomplete = Symbol('HAMT merge incomplete')
 
-export default hamt_merge
 export async function hamt_merge(sync, hamt_a, hamt_b) ::
   if 0 !== hamt_a.h.length || 0 !== hamt_b.h.length ::
     throw new Error @ "hamt_merge implements only top-level merging"
@@ -147,7 +146,7 @@ export async function hamt_merge_peers(sync, hamt_a, hamt_b) ::
   if ! vec_equal(h_a, h_b) ::
     throw new Error @ 'HAMT nodes are not valid peers'
 
-  if vec_equal @ await hamt_a.as_attr('key_public'), await hamt_b.as_attr('key_public') ::
+  if vec_equal @ await hamt_a.as_attr('key_loc'), await hamt_b.as_attr('key_loc') ::
     return hamt_a
 
   let unchanged = true, any_incomplete = false
@@ -156,7 +155,7 @@ export async function hamt_merge_peers(sync, hamt_a, hamt_b) ::
     retain: async (ki, node) => @
       node=await node
       deps.set(ki, node)
-      node
+      @[] await node.hamt_key()
 
   const h=h_a, amt=amt_a.slice()
   for const ki in amt_b ::
@@ -171,7 +170,8 @@ export async function hamt_merge_peers(sync, hamt_a, hamt_b) ::
 
       if sym_hamt_incomplete === res ::
         any_incomplete = true
-      else amt[ki] = res
+
+      amt[ki] = res
 
   return any_incomplete ? sym_hamt_incomplete
     : unchanged ? hamt_a

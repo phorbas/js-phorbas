@@ -1,10 +1,10 @@
 import { cbor_decode, cbor_encode } from 'cbor-codec'
 import { vec_equal } from './_hamt_vec_utils.jsy'
 
-import hamt_add_key from './hamt_add_key.jsy'
-import hamt_merge from './hamt_merge.jsy'
-import hamt_store from './hamt_store.jsy'
-import hamt_sync from './hamt_sync.jsy'
+import {hamt_add_key} from './hamt_add_key.jsy'
+import {hamt_merge} from './hamt_merge.jsy'
+import {hamt_store} from './hamt_store.jsy'
+import {hamt_sync_queue} from './hamt_sync.jsy'
 
 
 const _map_noop = @{} get(){}
@@ -78,9 +78,9 @@ const hamt_proto = @{}
       this._hamt_node_.fetch_keyctx(hamt_key)
     return this.with_root(root)
 
-  async store_root(attr=true) ::
+  async store_root(attr=true, opt={}) ::
     const {root} = this
-    await hamt_store(root)
+    await hamt_store(root, opt)
     return root.as_attr(attr)
 
   async add_keyctx(keyctx) ::
@@ -96,32 +96,26 @@ const hamt_proto = @{}
     return this.add_key_u8 @
       key.key_loc || key
 
-  async merge(hamt_other) ::
+  async merge(hamt_other, opt={}) ::
     let {root} = this
     if undefined === root ::
       root = this.new_root().root
 
     const o_root = hamt_other.root || hamt_other
-    const sync_ctx = hamt_sync(root, o_root)
+    const sync_q = hamt_sync_queue(root, o_root, opt)
 
     const ts_cutoff = Date.now() + 1000 // ts_duration
-    console.log @ "Top of Merge:"
     while true ::
-      const merged_root = await hamt_merge @
-        sync_ctx.sync, root, o_root
+      await sync_q.prepare_sync()
 
-      console.log @ "After merge alg"
-      const count = await sync_ctx.finish_sync()
-      console.log @ "After SYNC FINISH", count
+      const merged_root = await hamt_merge @
+        sync_q.sync, root, o_root
+
+      const count = await sync_q.finish_sync()
       if 0 === count ::
-        console.log @ "Merge SUCCESS"
         return this.with_root(merged_root)
       else if ts_cutoff < Date.now() ::
-        console.log @ "Merge CUTOFF"
-        break
-      else ::
-        console.log @ "Merge TEMP DONE"
-        return
+        return false
 
 
 const hamt_node_proto = @{}
