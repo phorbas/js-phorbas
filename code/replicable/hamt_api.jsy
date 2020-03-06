@@ -55,7 +55,7 @@ const hamt_proto = @{}
     const o_root = hamt_other.root || hamt_other
     const sync_q = hamt_sync_queue(root, o_root, opt)
 
-    const ts_cutoff = Date.now() + 1000 // ts_duration
+    const ts_cutoff = Date.now() + @ opt.ts_duration || 1000
     while true ::
       await sync_q.prepare_sync()
 
@@ -65,6 +65,7 @@ const hamt_proto = @{}
       const count = await sync_q.finish_sync()
       if 0 === count ::
         return this.with_root(merged_root)
+
       else if ts_cutoff < Date.now() ::
-        return false
+        throw new Error('timeout')
 
