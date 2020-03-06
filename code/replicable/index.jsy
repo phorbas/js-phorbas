@@ -1,1 +1,1 @@
-export * from './HAMT.jsy'
+export * from './hamt_api.jsy'
