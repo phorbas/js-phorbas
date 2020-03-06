@@ -1,28 +1,22 @@
-
-export ::
-  web_indexdb_store as default,
-  web_indexdb_store as indexdb_store,
-  web_indexdb_store as web_idb_store,
-  web_indexdb_store as idb_store,
+import {as_hex_key} from './hex_keys.jsy'
+import store_api_proto from './store_api.jsy'
 
 export async function web_indexdb_store(db_name='phorbas', store_name='kv') ::
   const {txn_ro, txn_rw} = with_idb_store_ctx @
     await idb_open(db_name, store_name), store_name
 
   return @{}
-    uses_binary_key: true
+    __proto__: store_api_proto
 
     async store_at(key, enc_content) ::
       const {kv, txn_done} = txn_rw()
-      kv.put @ enc_content, key
+      kv.put @ enc_content, as_hex_key(key)
       await txn_done
       return true
     async batch_store(kv_pairs) ::
-      // IndexDB fails transactions across await boundaries
-      kv_pairs = await Promise.all(kv_pairs)
       const {kv, txn_done} = txn_rw()
       for const [key, enc_content] of kv_pairs ::
-        kv.put @ enc_content, key
+        kv.put @ enc_content, as_hex_key(key)
 
       await txn_done
       return true
@@ -30,38 +24,36 @@ export async function web_indexdb_store(db_name='phorbas', store_name='kv') ::
 
     async fetch_at(key) ::
       const {kv, txn_done} = txn_ro()
-      const ans = kv.get(key)
+      const ans = kv.get @ as_hex_key(key)
       await txn_done
       return ans.result
     async batch_fetch(keys) ::
-      // IndexDB fails transactions across await boundaries
-      keys = await Promise.all(keys)
       const {kv, txn_done} = txn_ro()
-      for const i in keys ::
-        keys[i] = kv.get @ keys[i]
+      const ans = []
+      for const k of keys ::
+        ans.push @# k, kv.get @ as_hex_key(k)
 
       await txn_done
-      for const i in keys ::
-        keys[i] = keys[i].result
+      for const tpl of ans ::
+        tpl[1] = tpl[1].result
       return keys
 
 
     async exists_at(key) ::
       const {kv, txn_done} = txn_ro()
-      const ans = kv.count(key)
+      const ans = kv.count @ as_hex_key(key)
       await txn_done
       return 0 | ans.result
     async batch_exists(keys) ::
-      // IndexDB fails transactions across await boundaries
-      keys = await Promise.all(keys)
       const {kv, txn_done} = txn_ro()
-      for const i in keys ::
-        keys[i] = kv.get @ keys[i]
+      const ans = []
+      for const k of keys ::
+        ans.push @# k, kv.count @ as_hex_key(k)
 
       await txn_done
-      for const i in keys ::
-        keys[i] = 0 | keys[i].result
-      return keys
+      for const tpl of ans ::
+        tpl[1] = tpl[1].result
+      return ans
 
 
 function with_idb_store_ctx(idb, store_name) ::

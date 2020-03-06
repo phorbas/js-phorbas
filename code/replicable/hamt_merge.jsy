@@ -2,15 +2,26 @@ import { vec_equal, vec_prefix } from './_hamt_vec_utils.jsy'
 import { hamt_add_key } from './hamt_add_key.jsy'
 import { hamt_replace_at, hamt_child_single, hamt_child_pair, hamt_inner_tree } from './hamt_ops.jsy'
 
+export const sym_hamt_incomplete = Symbol('HAMT merge incomplete')
 
 export default hamt_merge
-export async function hamt_merge(hamt_a, hamt_b) ::
-  const {h: h_a} = hamt_a, {h: h_b} = hamt_b
+export async function hamt_merge(sync, hamt_a, hamt_b) ::
+  if 0 !== hamt_a.h.length || 0 !== hamt_b.h.length ::
+    throw new Error @ "hamt_merge implements only top-level merging"
+
+  const res = await hamt_merge_peers @ sync, hamt_a, hamt_b
+  if sym_hamt_incomplete !== res ::
+    return res
+
+  /*
   const idx = vec_prefix(h_a, h_b)
   const ki = h_b[idx]
 
   if undefined === ki ::
-    return hamt_merge_peers @ hamt_a, hamt_b
+    return hamt_merge_peers @
+      sync, hamt_a, hamt_b
+
+  throw new Error @ "UNTESTED"
 
   const current = hamt_a.amt[ki]
   if undefined === current ::
@@ -24,7 +35,7 @@ export async function hamt_merge(hamt_a, hamt_b) ::
   else if Array.isArray(current) ::
     const cur_child_node = await hamt_a.fetch_dep(ki, current)
     const new_child_node = await hamt_merge @
-      cur_child_node, hamt_b
+      sync, cur_child_node, hamt_b
 
     if cur_child_node === new_child_node ::
       // unchanged child HAMT -- no change required
@@ -37,67 +48,134 @@ export async function hamt_merge(hamt_a, hamt_b) ::
 
   else ::
     // create node for existing entry and recursively merge
-    const child_node = hamt_child_single @ [], hamt_a, h_a, current
-    const join_tree = await hamt_merge @ child_node, hamt_b
+    const child_node = hamt_child_single @
+      hamt_a, h_a, current
+    const join_tree = await hamt_merge @
+      sync, child_node, hamt_b
 
     return hamt_replace_at @
       hamt_a, ki,
       [await join_tree.hamt_key()]
       [[ki, join_tree]]
-
+  */
 
 
 
 const _amt_merge = @{}
-  async 'amt merge 0 0'(hamt_node, ki, e_a, e_b) ::
-    return await hamt_child_pair @
-      hamt_node, hamt_node.h,
-      e_a, e_b
+  async 'amt merge - 1'(opx, hamt_node, ki, e_a, e_b) ::
+    opx.sync @ e_b
+    return e_b
 
-  async 'amt merge 0 1'(hamt_node, ki, e_a, e_b) ::
-    return await hamt_add_key @
-      await hamt_node.fetch_dep(ki, e_b),
-      e_a
+  async 'amt merge - *'(opx, hamt_node, ki, e_a, e_b) ::
+    const [hamt_b, kctx_b] = await hamt_node.fetch_dep(ki, e_b)
+    if undefined === hamt_b ::
+      opx.sync @ kctx_b
+      return sym_hamt_incomplete
 
-  async 'amt merge 1 0'(hamt_node, ki, e_a, e_b) ::
-    return await hamt_add_key @
-      await hamt_node.fetch_dep(ki, e_a),
-      e_b
+    const hamt_a = hamt_node.new_hamt @:
+      h: hamt_b.h.slice(), amt: []
+    return await opx.retain @ ki,
+      hamt_merge_peers @
+        opx.sync, hamt_a, hamt_b
 
-  async 'amt merge 1 1'(hamt_node, ki, e_a, e_b) ::
-    return await hamt_merge_peers @
-      await hamt_node.fetch_dep(ki, e_a),
-      await hamt_node.fetch_dep(ki, e_b),
+  async 'amt merge 1 1'(opx, hamt_node, ki, e_a, e_b) ::
+    throw new Error @ "TODO VERIFY 1 1"
+    if vec_equal @ e_a, e_b ::
+      // matching existing entries
+      return hamt_node
+
+    opx.sync @ e_b
+    return await opx.retain @ ki,
+      hamt_child_pair @
+        hamt_node, hamt_node.h,
+        e_a, e_b
+
+  async 'amt merge 1 *'(opx, hamt_node, ki, e_a, e_b) ::
+    const [hamt_b, kctx_b] = await hamt_node.fetch_dep(ki, e_b)
+    if undefined === hamt_b ::
+      opx.sync @ kctx_b
+      return sym_hamt_incomplete
+
+    throw new Error @ "TODO VERIFY 1 *"
+    const hamt_a = hamt_child_single @
+      hamt_node, hamt_b.h, e_a
+    return await opx.retain @ ki,
+      hamt_merge_peers @
+        opx.sync, hamt_a, hamt_b
+
+  async 'amt merge * 1'(opx, hamt_node, ki, e_a, e_b) ::
+    throw new Error @ "TODO VERIFY * 1"
+    opx.sync @ e_b
+    const [hamt_a, kctx_a] = await hamt_node.fetch_dep(ki, e_a)
+    if undefined === hamt_a ::
+      opx.sync @ kctx_a
+      return sym_hamt_incomplete
+
+    return await opx.retain @ ki,
+      hamt_add_key @
+        hamt_a, e_b
+
+  async 'amt merge * *'(opx, hamt_node, ki, e_a, e_b) ::
+    if vec_equal @ e_a[0], e_b[0] ::
+      // matching existing subtrees
+      return hamt_a 
+
+    const [hamt_a, kctx_a] = await hamt_node.fetch_dep(ki, e_a)
+    const [hamt_b, kctx_b] = await hamt_node.fetch_dep(ki, e_b)
+
+    if undefined === hamt_a || undefined === hamt_b ::
+      if undefined === hamt_a ::
+        opx.sync @ kctx_a
+      if undefined === hamt_b ::
+        opx.sync @ kctx_b
+      return sym_hamt_incomplete
+
+    throw new Error @ "TODO VERIFY * *"
+    return await opx.retain @ ki,
+      hamt_merge_peers @
+        opx.sync, hamt_a, hamt_b
 
 
-export async function hamt_merge_peers(hamt_a, hamt_b) ::
+function _tag_for_amt(e) ::
+  if undefined === e :: return '-'
+  if Array.isArray(e) :: return '*'
+  return '1'
+
+export async function hamt_merge_peers(sync, hamt_a, hamt_b) ::
   const {h: h_a, amt: amt_a} = hamt_a
   const {h: h_b, amt: amt_b} = hamt_b
   if ! vec_equal(h_a, h_b) ::
     throw new Error @ 'HAMT nodes are not valid peers'
 
-  if vec_equal @ await hamt_a.key_public(), await hamt_b.key_public() ::
+  if vec_equal @ await hamt_a.as_attr('key_public'), await hamt_b.as_attr('key_public') ::
     return hamt_a
 
-  let changed = false, deps=new Map()
+  let unchanged = true, any_incomplete = false
+  const deps = new Map()
+  const opx = @{} sync,
+    retain: async (ki, node) => @
+      node=await node
+      deps.set(ki, node)
+      node
+
   const h=h_a, amt=amt_a.slice()
   for const ki in amt_b ::
     const e_b = amt_b[ki]
-    if undefined === e_b :: continue
+    if undefined !== e_b ::
+      unchanged = false
+      const e_a = amt_a[ki]
+      const merge_kind = `amt merge ${_tag_for_amt(e_a)} ${_tag_for_amt(e_b)}`
+      const res = await
+        _amt_merge[merge_kind] @
+          opx, hamt_a, ki, e_a, e_b
 
-    changed = e_b
-    const e_a = amt_a[ki]
-    if undefined === e_a ::
-      amt[ki] = e_b
+      if sym_hamt_incomplete === res ::
+        any_incomplete = true
+      else amt[ki] = res
 
-    else ::
-      const fn_merge = _amt_merge[`amt merge ${0|Array.isArray(e_a)} ${0|Array.isArray(e_b)}`]
-      const node = await fn_merge @ hamt_a, ki, e_a, e_b
-      deps.set(ki, node)
-      amt[ki] = [await node.hamt_key()]
-
-  return undefined === changed ? hamt_a
-    : hamt_node
+  return any_incomplete ? sym_hamt_incomplete
+    : unchanged ? hamt_a
+    : hamt_a
         .new_hamt @: h, amt
         .deps_from @ hamt_b, hamt_a, deps
 

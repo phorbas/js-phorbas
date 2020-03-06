@@ -1,0 +1,55 @@
+export default store_api_proto
+export const store_api_proto = @{}
+  __proto__: null
+
+  //async store_at(key, enc_content) ::
+  async batch_store(kv_pairs) ::
+    const store_at = this.store_at.bind(this)
+    for const [key, enc_content] of kv_pairs ::
+      await store_at(key, enc_content)
+    return true
+
+  //async fetch_at(key) ::
+  async batch_fetch(keys) ::
+    const ans = []
+    const fetch_at = this.fetch_at.bind(this)
+    for const k of keys ::
+      ans.push @# k, await fetch_at(k)
+    return ans
+
+  //async exists_at(key) ::
+  async batch_exists(keys) ::
+    const ans = []
+    const exists_at = this.exists_at.bind(this)
+    for const k of keys ::
+      ans.push @# k, await exists_at(k)
+    return ans
+
+
+  async sync_from(remote_store, keys) ::
+    await this.batch_store @
+      await remote_store.batch_fetch(keys)
+    return keys
+
+  async sync_absent_from(remote_store, keys) ::
+    return this.sync_from @ remote_store,
+      await this.filter_absent(keys)
+
+  async filter_present(keys) ::
+    return filter_by_value @
+      await this.batch_exists(keys)
+      Boolean
+
+  async filter_absent(keys) ::
+    return filter_by_value @
+      await this.batch_exists(keys)
+      exists => ! exists
+
+
+function filter_by_value(entries, fn_filter) ::
+  const ans = []
+  for const [k, v] of entries ::
+    if fn_filter(v) ::
+      ans.push(k)
+  return ans
+

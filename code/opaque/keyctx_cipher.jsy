@@ -1,0 +1,23 @@
+
+export default with_cipher
+export function with_cipher(keyctx_proto, cipher) ::
+  return @{} __proto__: keyctx_proto,
+
+    async encipher_content() ::
+      const raw_content = this.local()
+      if undefined === raw_content ::
+        throw new Error('No associated raw_content')
+
+      const {key_ref, key_loc} = this
+      const enc_content = await cipher.encrypt @
+        raw_content, key_ref, key_loc
+      return enc_content
+
+    async decipher_content(enc_content) ::
+      const {key_ref, key_loc} = this
+      const raw_content = await cipher.decrypt @
+        enc_content, key_ref, key_loc
+
+      this.retain(raw_content)
+      return raw_content
+

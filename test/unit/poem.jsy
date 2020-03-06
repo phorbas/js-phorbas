@@ -3,38 +3,41 @@ import { cbor_decode, cbor_encode } from 'cbor-codec'
 import { poem_lines } from '../poem.jsy'
 
 #IF PLAT_NODEJS
-  import {tahoe_opaque} from 'phorbas/esm/node/index.mjs'
-  import {js_map_store} from 'phorbas/esm/node/index.mjs'
+  import @{}
+    tahoe_opaque, phorbas_hamt,
+    js_map_store,
+  from 'phorbas/esm/node/index.mjs'
 
 #ELIF PLAT_WEB
-  import {tahoe_opaque} from 'phorbas/esm/web/index.js'
-  import {js_map_store} from 'phorbas/esm/web/index.js'
-  import {web_indexdb_store} from 'phorbas/esm/web/index.js'
+  import @{}
+    tahoe_opaque, phorbas_hamt,
+    js_map_store, web_indexdb_store,
+  from 'phorbas/esm/web/index.js'
 
 
 describe @ 'poem', @::
   describe @ 'with js_map_store', @::
     it @ 'simple read after write', @::>
       await test_poem @
-        tahoe_opaque.with_ctx @:
-          storage: await js_map_store()
+        tahoe_opaque.with_storage @
+          await js_map_store()
 
     it @ 'with index', @::>
       await test_poem_with_index @
-        tahoe_opaque.with_ctx @:
-          storage: await js_map_store()
+        tahoe_opaque.with_storage @
+          await js_map_store()
 
   #IF PLAT_WEB
     describe @ 'with web_indexdb_store', @::
       it @ 'simple read after write', @::>
         await test_poem @
-          tahoe_opaque.with_ctx @:
-            storage: await web_indexdb_store()
+          tahoe_opaque.with_storage @
+            await web_indexdb_store()
 
       it @ 'with index', @::>
         await test_poem_with_index @
-          tahoe_opaque.with_ctx @:
-            storage: await web_indexdb_store()
+          tahoe_opaque.with_storage @
+            await web_indexdb_store()
   ;
 
 
@@ -43,7 +46,7 @@ async function test_poem(opaque) ::
     const kctx = await opaque.from_content(line)
     const ans = await kctx.store()
 
-    const kctx2 = await opaque.from_key(kctx.key_secret)
+    const kctx2 = await opaque.from_key(kctx.key_ref)
     const rt = await kctx2.fetch_utf8()
 
     expect(rt).to.be.equal(line)
@@ -58,12 +61,12 @@ async function test_poem_with_index(opaque) ::
 async function store_poem_with_index(opaque) ::
   const poem_index = []
   for const line of poem_lines ::
-    const kctx = await opaque.store(line)
-    poem_index.push(kctx.key_secret)
+    const kctx_line = await opaque.store(line)
+    poem_index.push(kctx_line.key_ref)
 
-  const kctx = await opaque.store @
+  const kctx_poem = await opaque.store @
     cbor_encode @ poem_index
-  return kctx.key_ref
+  return kctx_poem.key_ref
 
 async function validate_poem_with_index(opaque, poem_ref) ::
   const poem_index = cbor_decode @

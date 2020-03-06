@@ -3,6 +3,8 @@ import { vec_equal } from './_hamt_vec_utils.jsy'
 
 import hamt_add_key from './hamt_add_key.jsy'
 import hamt_merge from './hamt_merge.jsy'
+import hamt_store from './hamt_store.jsy'
+import hamt_sync from './hamt_sync.jsy'
 
 
 const _map_noop = @{} get(){}
@@ -27,8 +29,8 @@ export function phorbas_hamt(opaque) ::
     deps_from(...args) ::
       const deps = new Map()
       for let each of args.filter(Boolean) ::
-        each = undefined !== each.hamt_key
-          ? _wm_deps.get(each) || [] : each
+        if undefined !== each.hamt_key ::
+          each = _wm_deps.get(each) || []
 
         for const [ki, inner] of each ::
           deps.set(ki, inner)
@@ -36,6 +38,7 @@ export function phorbas_hamt(opaque) ::
       _wm_deps.set(this, deps)
       return this
 
+    keyctx_for: opaque.from_key.bind(opaque)
 
     async keyctx(hamt_key) ::
       let keyctx = _wm_keyctx.get(this)
@@ -48,7 +51,6 @@ export function phorbas_hamt(opaque) ::
         keyctx = await keyctx
         _wm_keyctx.set(this, keyctx)
       return keyctx
-
 
 
   const _hamt_ = @{}
@@ -72,36 +74,54 @@ const hamt_proto = @{}
         h: new Uint8Array(0), amt: []
 
   async load_root(hamt_key) ::
-    return this.with_root @
-      await this._hamt_node_.fetch(hamt_key)
+    const [root, keyctx] = await
+      this._hamt_node_.fetch_keyctx(hamt_key)
+    return this.with_root(root)
 
   async store_root(attr=true) ::
     const {root} = this
-    await root.opaque.storage.batch_store @
-      iter_store_pairs @ root
+    await hamt_store(root)
     return root.as_attr(attr)
 
   async add_keyctx(keyctx) ::
     return this.add_key_u8 @
-      await (await keyctx).key_public
+      await (await keyctx).key_loc
 
-  async add_key_u8(key_public) ::
-    const root = await hamt_add_key @ this.root, key_public
+  async add_key_u8(key_loc) ::
+    const root = await hamt_add_key @ this.root, key_loc
     return this.with_root @ await root
 
   async add_key(key) ::
     key = await key
     return this.add_key_u8 @
-      key.key_public || key
+      key.key_loc || key
 
   async merge(hamt_other) ::
-    if undefined === this.root ::
-      return this.with_root(hamt_other)
+    let {root} = this
+    if undefined === root ::
+      root = this.new_root().root
 
-    const root = await hamt_merge @ this.root, hamt_other.root || hamt_other
+    const o_root = hamt_other.root || hamt_other
+    const sync_ctx = hamt_sync(root, o_root)
 
-    // TODO: fetch all non-present entries discovered during merge
-    return this.with_root(root)
+    const ts_cutoff = Date.now() + 1000 // ts_duration
+    console.log @ "Top of Merge:"
+    while true ::
+      const merged_root = await hamt_merge @
+        sync_ctx.sync, root, o_root
+
+      console.log @ "After merge alg"
+      const count = await sync_ctx.finish_sync()
+      console.log @ "After SYNC FINISH", count
+      if 0 === count ::
+        console.log @ "Merge SUCCESS"
+        return this.with_root(merged_root)
+      else if ts_cutoff < Date.now() ::
+        console.log @ "Merge CUTOFF"
+        break
+      else ::
+        console.log @ "Merge TEMP DONE"
+        return
 
 
 const hamt_node_proto = @{}
@@ -121,22 +141,23 @@ const hamt_node_proto = @{}
   async as_attr(attr) ::
     return (await this.keyctx()).as_attr(attr)
   async hamt_key() ::
-    return this.as_attr('key_secret')
+    return this.as_attr('key_ref')
   async exists(hamt_key) ::
-    const keyctx = await this.keyctx(hamt_key)
+    const keyctx = await this.keyctx_for(hamt_key)
     return await keyctx.exists()
+
+  async fetch_keyctx(hamt_key) ::
+    const keyctx = await this.keyctx_for(hamt_key)
+    const res = await keyctx.fetch()
+    const node = res ? this.decode(res) : res
+    return [node, keyctx]
 
   async fetch_dep(ki, [hamt_key]) ::
     const dep = this.dep_at(ki, hamt_key)
     if undefined !== dep ::
       if vec_equal @ hamt_key, await dep.hamt_key() ::
-        return dep
-    return this.fetch(hamt_key)
-
-  async fetch(hamt_key) ::
-    const keyctx = await this.keyctx(hamt_key)
-    const res = await keyctx.fetch()
-    return res ? this.decode(res) : res
+        return @[] dep, dep.keyctx()
+    return await this.fetch_keyctx(hamt_key)
 
   *iter_dependency_tree() ::
     const children = this.local_deps()
@@ -144,10 +165,4 @@ const hamt_node_proto = @{}
       for const [ki, inner] of children ::
         yield * inner.iter_dependency_tree()
     yield this
-
-
-function _as_store_pair(kx) :: return kx.as_store_pair()
-function * iter_store_pairs(hamt_root) ::
-  for const node of hamt_root.iter_dependency_tree() ::
-    yield node.keyctx().then @ _as_store_pair
 

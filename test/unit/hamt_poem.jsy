@@ -4,36 +4,39 @@ import { cbor_decode, cbor_encode } from 'cbor-codec'
 import { poem_lines } from '../poem.jsy'
 
 #IF PLAT_NODEJS
-  import {tahoe_opaque, phorbas_hamt} from 'phorbas/esm/node/index.mjs'
-  import {js_map_store} from 'phorbas/esm/node/index.mjs'
+  import @{}
+    tahoe_opaque, phorbas_hamt,
+    js_map_store,
+  from 'phorbas/esm/node/index.mjs'
 
 #ELIF PLAT_WEB
-  import {tahoe_opaque, phorbas_hamt} from 'phorbas/esm/web/index.js'
-  import {js_map_store} from 'phorbas/esm/web/index.js'
-  import {web_indexdb_store} from 'phorbas/esm/web/index.js'
+  import @{}
+    tahoe_opaque, phorbas_hamt,
+    js_map_store, web_indexdb_store,
+  from 'phorbas/esm/web/index.js'
 
 
 describe @ 'hamt poem', @::
   describe @ 'with js_map_store', @::
     it @ 'simple HAMT use', @::>
       await test_hamt_poem @
-        tahoe_opaque.with_ctx @:
-          storage: await js_map_store()
+        tahoe_opaque.with_storage @
+          await js_map_store()
 
     it.skip @ 'syncing HAMT', @::>
       await test_hamt_sync @
-        tahoe_opaque.with_ctx @:
-          storage: await js_map_store()
+        tahoe_opaque.with_storage @
+          await js_map_store()
 
-        tahoe_opaque.with_ctx @:
-          storage: await js_map_store()
+        tahoe_opaque.with_storage @
+          await js_map_store()
 
   #IF PLAT_WEB
     describe @ 'with web_indexdb_store', @::
       it @ 'simple HAMT use', @::>
         await test_hamt_poem @
-          tahoe_opaque.with_ctx @:
-            storage: await web_indexdb_store()
+          tahoe_opaque.with_storage @
+            await web_indexdb_store()
 
   ;
 
@@ -47,7 +50,7 @@ async function test_hamt_poem(opaque) ::
     const hamt_0 = hamt
     for const line of poem_lines ::
       const kctx = await opaque.from_content(line)
-      poem_index.push(kctx.key_secret)
+      poem_index.push(kctx.key_ref)
       hamt = await hamt.add_key @ kctx.store()
 
     hamt_root_eq.push @ hamt.root === hamt_0.root
@@ -98,7 +101,8 @@ async function test_hamt_sync(opaque_src, opaque_dest) ::
       phorbas_hamt(opaque_dest)
         .new_root()
 
-    hamt_dest.merge @ hamt_src
+    const res = await hamt_dest.merge @ hamt_src
+    console.log @: res
 
   await validate_poem_with_index @
     opaque_dest, poem_ref

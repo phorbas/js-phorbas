@@ -13,6 +13,9 @@ const plugins = [
   rpi_resolve({preferBuiltins: true}),
 ]
 
+const plugins_generic = [
+  rpi_jsy({defines: {}}),
+  ... plugins ]
 const plugins_nodejs = [
   rpi_jsy({defines: {PLAT_NODEJS: true}}),
   ... plugins ]
@@ -31,6 +34,13 @@ add_jsy('index', {module_name: pkg_name})
 
 function add_jsy(src_name, opt={}) {
   let module_name = opt.module_name || `${pkg_name}_${src_name}`
+
+  if (plugins_generic)
+    configs.push({
+      input: `code/${src_name}.jsy`,
+      plugins: plugins_generic, external,
+      output: [
+        { file: `esm/${src_name}.mjs`, format: 'es', sourcemap } ]})
 
   if (plugins_nodejs)
     configs.push({

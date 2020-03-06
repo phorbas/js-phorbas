@@ -1,0 +1,22 @@
+export default hamt_store
+export async function hamt_store(hamt_root, opt={}) ::
+  const batch_size = opt.batch_size || 16
+  const {storage} = hamt_root.opaque
+
+  let q = [], active
+  for const node of hamt_root.iter_dependency_tree() ::
+    const kctx = await node.keyctx()
+    const entry = await kctx.as_store_pair()
+    q.push(entry)
+
+    if q.length > batch_size ::
+      await active
+      active = storage.batch_store(q)
+      q = []
+
+  await active
+  active = storage.batch_store(q)
+  q = []
+  await active
+
+

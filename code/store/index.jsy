@@ -1,3 +1,4 @@
+export * from './store_api.jsy'
 export * from './js_map.jsy'
 export * from './web_indexdb.jsy'
 

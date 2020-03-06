@@ -1,27 +1,14 @@
-import js_map_store from '../store/js_map.jsy'
-import {u8_to_hex, u8_to_utf8} from 'u8-utils'
+//import js_map_store from '../store/js_map.jsy'
+import {u8_to_utf8} from 'u8-utils'
 
 const _wm_ctx_content = new WeakMap()
 
-const keyctx_proto = @{}
-  cipher: abstract_cipher()
-  storage: js_map_store()
-  kdf_cipher: key_secret => key_secret
-  kdf_iv: key_public => key_public
-
-  with_ctx({cipher, storage}) ::
-    const props = @{}
-    if cipher && cipher !== this.cipher ::
-      props.cipher = @{} value: cipher
-
-    if storage && storage !== this.storage ::
-      props.storage = @{} value: storage
-      props.key_loc = @{} get:
-        storage.uses_binary_key
-          ? _get_binary_key
-          : _get_hex_key
-
-    return Object.create @ this, props
+export default keyctx_proto
+export const keyctx_proto = @{}
+  //storage: js_map_store()
+  with_storage(storage) ::
+    return Object.create @ this, @{}
+      storage: {value: storage}
 
 
   local() :: return _wm_ctx_content.get(this)
@@ -36,32 +23,24 @@ const keyctx_proto = @{}
     const raw_content = this.local()
     if undefined === raw_content ::
       throw new Error('No associated raw_content')
-
-    const {key_secret, key_public, cipher} = this
-    const enc_content = await cipher.encrypt @ raw_content,
-      await this.kdf_cipher(key_secret)
-      await this.kdf_iv(key_public)
-    return enc_content
-
-  async decipher_content(enc_content) ::
-    const {key_secret, key_public, cipher} = this
-    const raw_content = await cipher.decrypt @ enc_content,
-      await this.kdf_cipher(key_secret)
-      await this.kdf_iv(key_public)
-
-    this.retain(raw_content)
     return raw_content
 
+  async decipher_content(enc_content) ::
+    this.retain(enc_content)
+    return enc_content
+
   async store(attr) ::
-    await this.storage.store_at @
-      this.key_loc, await this.encipher_content()
+    const {storage, key_loc} = this
+    await storage.store_at @
+      key_loc, await this.encipher_content()
     return this.as_attr(attr)
 
   async as_attr(attr) ::
     return ! attr ? this : this[attr]
 
   exists() ::
-    return this.storage.exists_at @ this.key_loc
+    const {storage, key_loc} = this
+    return storage.exists_at @ key_loc
 
   fetch_utf8() ::
     return this.fetch().then(u8_to_utf8)
@@ -76,43 +55,9 @@ const keyctx_proto = @{}
     return p
 
   async _do_fetch() ::
-    const enc_content = await this.storage.fetch_at @ this.key_loc
+    const {storage, key_loc} = this
+    const enc_content = await storage.fetch_at(key_loc)
     return enc_content instanceof Uint8Array
       ? this.decipher_content(enc_content)
       : enc_content
-
-
-
-const _wm_key_hex = new WeakMap()
-function _get_hex_key() ::
-  const {key_public} = this
-  let r = _wm_key_hex.get(key_public)
-  if undefined === r ::
-    _wm_key_hex.set @ key_public, r = u8_to_hex(key_public)
-  return r
-
-function _get_binary_key() :: return this.key_public
-function _get_reference_key() :: return this.key_secret
-
-Object.defineProperties @ keyctx_proto, @{}
-  key_loc_bin: @{} get: _get_binary_key
-  key_loc_bin: @{} get: _get_hex_key
-  key_ref: @{} get: _get_reference_key
-
-
-function abstract_cipher() ::
-  const warn = v => @
-    console.warn @ 'Use concrete cipher like iso_aes_gcm'
-    v
-
-  return @{}
-    async encrypt(raw_content, key_secret, key_public) ::
-      return warn @ raw_content
-    async decrypt(enc_content, key_secret, key_public) ::
-      return warn @ enc_content
-
-export ::
-  keyctx_proto,
-  keyctx_proto as keyctx,
-  keyctx_proto as default,
 

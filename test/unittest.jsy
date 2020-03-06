@@ -1,4 +1,5 @@
 require('source-map-support/register.js')
 import './unit/smoke.jsy'
+import './unit/opaque_keyctx.jsy'
 import './unit/poem.jsy'
 import './unit/hamt_poem.jsy'

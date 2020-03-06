@@ -16,7 +16,9 @@ export async function hamt_add_key(hamt_node, key_public) ::
 
   else if Array.isArray(current) ::
     // existing TRIE node, denoted by being a single-item Array of [hamt_key]
-    const cur_child_node = await hamt_node.fetch_dep(ki, current)
+    const [cur_child_node, kctx_cur] = await
+      hamt_node.fetch_dep(ki, current)
+
     const new_child_node = await hamt_add_key @
       cur_child_node, key_public
 

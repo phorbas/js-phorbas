@@ -11,14 +11,15 @@ self-verifying data integrity properties.
 import sha_256 from './iso_sha_256.jsy'
 import aes_256_gcm from './iso_aes_gcm.jsy'
 
-import opaque_proto from './opaque.jsy'
+import {opaque_proto} from './opaque.jsy'
+import with_cipher from './keyctx_cipher.jsy'
 
-const tahoe_opaque = opaque_proto.with_ctx @:
-  cipher: aes_256_gcm
-  kdf_secret: sha_256
-  kdf_public: sha_256
-
-export ::
-  tahoe_opaque,
-  tahoe_opaque as default,
+export default tahoe_opaque
+export const tahoe_opaque = @{}
+  __proto__: opaque_proto
+  kdf_ref: sha_256
+  kdf_loc: sha_256
+  keyctx_proto: with_cipher @
+    opaque_proto.keyctx_proto
+    aes_256_gcm
 

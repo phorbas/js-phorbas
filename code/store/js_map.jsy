@@ -1,38 +1,35 @@
+import {as_hex_key} from './hex_keys.jsy'
+import store_api_proto from './store_api.jsy'
 
-export ::
-  js_map_store as default,
-  js_map_store as map_store,
-
-export async function js_map_store() ::
-  const _db = new Map()
+export async function js_map_store(db) ::
+  const _db = db || new Map()
   const _db_has = key => 0 | _db.has @ key
   const _db_get = key => _db.get @ key
 
   return @{}
-    uses_binary_key: false
+    __proto__: store_api_proto
 
     async store_at(key, enc_content) ::
-      _db.set @ key, enc_content
+      _db.set @ as_hex_key(key), enc_content
       return true
     async batch_store(kv_pairs) ::
-      for const pair of kv_pairs ::
-        const [key, enc_content] = await pair
-        _db.set @ key, enc_content
+      for const [key, enc_content] of kv_pairs ::
+        _db.set @ as_hex_key(key), enc_content
       return true
 
     async fetch_at(key) ::
-      return _db.get @ key
+      return _db.get @ as_hex_key(key)
     async batch_fetch(keys) ::
       const ans = []
       for const k of keys ::
-        ans.push @ _db.get @ await k
+        ans.push @# k, _db.get @ as_hex_key(k)
       return ans
 
     async exists_at(key) ::
-      return 0 | _db.has @ key
+      return 0 | _db.has @ as_hex_key(key)
     async batch_exists(keys) ::
       const ans = []
       for const k of keys ::
-        ans.push @ _db.has @ await k
+        ans.push @# k, _db.has @ as_hex_key(k)
       return ans
 

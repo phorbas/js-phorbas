@@ -1,0 +1,56 @@
+const { assert, expect } = require('chai')
+import { cbor_decode, cbor_encode } from 'cbor-codec'
+import { poem_lines } from '../poem.jsy'
+
+#IF PLAT_NODEJS
+  import @{} tahoe_opaque, js_map_store
+  from 'phorbas/esm/node/index.mjs'
+
+#ELIF PLAT_WEB
+  import @{} tahoe_opaque, js_map_store
+  from 'phorbas/esm/web/index.js'
+
+
+describe @ 'opaque keyctx', @::
+  it @ 'simple', @::>
+    const src_string = 'a test'
+    const known_key_ref = new Uint8Array @#
+      168,  38,  57, 182, 248, 195, 166, 229,
+       54, 216, 204,  86,  44,  59, 134, 255,
+       75,   1,  44, 132, 171,  35,  12,  30,
+       91, 230,  73, 170, 154, 210, 109,  33
+
+    const known_key_loc = new Uint8Array @#
+      240,  90, 237, 155,  39, 219,   3,  77,
+       15, 247,  61, 134, 172, 253, 132, 130,
+      120, 122,  15, 198, 115, 186,  25,  22,
+       55, 127,   2,  18, 231, 226,  14,  55
+
+    const opaque = tahoe_opaque.with_storage @
+      await js_map_store()
+
+    ::
+      const kctx = await opaque.store(src_string)
+      assert.deepEqual @ kctx.key_ref, known_key_ref
+      assert.deepEqual @ kctx.key_loc, known_key_loc
+
+    ::
+      const kctx = await opaque.from_key(known_key_ref)
+      assert.deepEqual @ kctx.key_loc, known_key_loc
+      assert.equal @ src_string, await kctx.fetch_utf8()
+
+
+  it @ 'non-existant', @::>
+    const known_key_ref = new Uint8Array @#
+      168,  38,  57, 182, 248, 195, 166, 229,
+       54, 216, 204,  86,  44,  59, 134, 255,
+       75,   1,  44, 132, 171,  35,  12,  30,
+       91, 230,  73, 170, 154, 210, 109,  33
+
+    const opaque = tahoe_opaque.with_storage @
+      await js_map_store()
+
+    const kctx = await opaque.from_key(known_key_ref)
+    const ans = await kctx.fetch()
+    assert.strictEqual @ undefined, ans
+
