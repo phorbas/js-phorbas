@@ -68,7 +68,7 @@ const hamt_node_proto = @{}
     return (await this.keyctx()).as_attr(attr)
   async hamt_key() ::
     return this.as_attr('key_ref')
-  async exists(hamt_key) ::
+  async hamt_exists(hamt_key) ::
     const keyctx = await this.keyctx_for(hamt_key)
     return await keyctx.exists()
 

@@ -7,6 +7,8 @@ import {hamt_sync_queue} from './hamt_sync.jsy'
 export function phorbas_hamt(opaque) ::
   const _hamt_ = Object.create @ hamt_proto, @{}
     _hamt_node_: @{} value: phorbas_hamt_node(opaque)
+    opaque: @{} value: opaque
+    storage: @{} value: opaque.storage
 
   _hamt_.__base__ = _hamt_
   return _hamt_.with_root(null)
@@ -34,18 +36,24 @@ const hamt_proto = @{}
     await hamt_store(root, opt)
     return root.as_attr(attr)
 
-  async add_keyctx(keyctx) ::
+  async add_keyctx(keyctx, skip_exists_check) ::
     return this.add_key_u8 @
       await (await keyctx).key_loc
+      skip_exists_check
 
-  async add_key_u8(key_loc) ::
-    const root = await hamt_add_key @ this.root, key_loc
-    return this.with_root @ await root
+  async add_key_u8(key_loc, skip_exists_check) ::
+    const {root, storage} = this
+    if skip_exists_check || await storage.exists_at(key_loc) ::
+      const merged_root = await
+        hamt_add_key @ root, key_loc
+      return this.with_root(merged_root)
+    else throw new Error('No stored entry for key')
 
-  async add_key(key) ::
+  async add_key(key, skip_exists_check) ::
     key = await key
     return this.add_key_u8 @
       key.key_loc || key
+      skip_exists_check
 
   async merge(hamt_other, opt={}) ::
     let {root} = this
