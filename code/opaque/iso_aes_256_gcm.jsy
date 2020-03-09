@@ -2,7 +2,7 @@
 #IF PLAT_NODEJS
   import {createSecretKey, createCipheriv, createDecipheriv} from 'crypto'
 
-  const aes_256_gcm__node = @{}
+  export const u8_aes_256_gcm = @{}
     async encrypt(raw_content, key_cipher, key_iv) ::
       const cipher = createCipheriv @
         'aes-256-gcm'
@@ -31,16 +31,12 @@
         cipher.final()
 
 
-  export const aes_256_gcm = aes_256_gcm__node
-
-
-
 #ELIF PLAT_WEB
   const _import_aes_gcm_raw = aeskey =>
     crypto.subtle.importKey @ 'raw', aeskey.subarray(-32),
       {name: 'AES-GCM', length: 256}, false, ['encrypt', 'decrypt']
 
-  const aes_256_gcm__web = @{}
+  export const u8_aes_256_gcm = @{}
     async encrypt(raw_content, key_cipher, key_iv) ::
       return new Uint8Array @ await crypto.subtle.encrypt @
         @{} name: 'AES-GCM', tagLength: 128,
@@ -55,9 +51,6 @@
         await _import_aes_gcm_raw @ key_cipher
         enc_content
 
-  export const aes_256_gcm = aes_256_gcm__web
 
-
-
-export default aes_256_gcm
+export default u8_aes_256_gcm
 

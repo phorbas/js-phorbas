@@ -1,4 +1,3 @@
-import {as_hex_key} from './hex_keys.jsy'
 import store_api_proto from './store_api.jsy'
 
 export async function web_indexdb_store(db_name='phorbas', store_name='kv') ::
@@ -10,13 +9,13 @@ export async function web_indexdb_store(db_name='phorbas', store_name='kv') ::
 
     async store_at(key, enc_content) ::
       const {kv, txn_done} = txn_rw()
-      kv.put @ enc_content, as_hex_key(key)
+      kv.put @ enc_content, key
       await txn_done
       return true
     async batch_store(kv_pairs) ::
       const {kv, txn_done} = txn_rw()
       for const [key, enc_content] of kv_pairs ::
-        kv.put @ enc_content, as_hex_key(key)
+        kv.put @ enc_content, key
 
       await txn_done
       return true
@@ -24,14 +23,14 @@ export async function web_indexdb_store(db_name='phorbas', store_name='kv') ::
 
     async fetch_at(key) ::
       const {kv, txn_done} = txn_ro()
-      const ans = kv.get @ as_hex_key(key)
+      const ans = kv.get @ key
       await txn_done
       return ans.result
     async batch_fetch(keys) ::
       const {kv, txn_done} = txn_ro()
       const ans = []
       for const k of keys ::
-        ans.push @# k, kv.get @ as_hex_key(k)
+        ans.push @# k, kv.get @ k
 
       await txn_done
       for const tpl of ans ::
@@ -41,14 +40,14 @@ export async function web_indexdb_store(db_name='phorbas', store_name='kv') ::
 
     async exists_at(key) ::
       const {kv, txn_done} = txn_ro()
-      const ans = kv.count @ as_hex_key(key)
+      const ans = kv.count @ key
       await txn_done
       return 0 | ans.result
     async batch_exists(keys) ::
       const {kv, txn_done} = txn_ro()
       const ans = []
       for const k of keys ::
-        ans.push @# k, kv.count @ as_hex_key(k)
+        ans.push @# k, kv.count @ k
 
       await txn_done
       for const tpl of ans ::
