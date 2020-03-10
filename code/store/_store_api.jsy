@@ -1,0 +1,46 @@
+
+export function with_store_api(storage_impl) ::
+  return @{}
+    __proto__: store_api
+    batch_fetch: storage_impl.batch_fetch.bind(storage_impl)
+    batch_exists: storage_impl.batch_exists.bind(storage_impl)
+    batch_store: storage_impl.batch_store.bind(storage_impl)
+
+
+const store_api = @{}
+  __proto__: null
+
+  async store_at(key, enc_content) ::
+    return await this.batch_store @# [key, enc_content]
+
+  async fetch_at(key) ::
+    const [res] = await this.batch_fetch @# key
+    return undefined === res ? res : res[1]
+
+  async exists_at(key) ::
+    const [res] = await this.batch_exists @# key
+    return undefined === res ? 0 : res[1]
+
+  async sync_from(remote_store, u8_key_list) ::
+    // TODO: batch by min-size between local and remote store
+
+    const kv_remote = await remote_store.batch_fetch(u8_key_list)
+    await this.batch_store(kv_remote)
+    return u8_key_list
+
+  async sync_absent_from(remote_store, u8_key_list) ::
+    // TODO: batch by min-size between local and remote store
+
+    // find keys that do not exist locally
+    u8_key_list = _keep_absent @
+      await this.batch_exists(u8_key_list)
+    return this.sync_from @
+      remote_store, u8_key_list
+
+
+function _keep_absent(entries) ::
+  const ans = []
+  for const [k, v] of entries ::
+    if ! v :: ans.push(k)
+  return ans
+

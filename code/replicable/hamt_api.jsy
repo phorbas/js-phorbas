@@ -8,7 +8,7 @@ export function phorbas_hamt(opaque) ::
   const _hamt_ = Object.create @ hamt_proto, @{}
     _hamt_node_: @{} value: phorbas_hamt_node(opaque)
     opaque: @{} value: opaque
-    storage: @{} value: opaque.storage
+    store_api: @{} value: opaque.store_api
 
   _hamt_.__base__ = _hamt_
   return _hamt_.with_root(null)
@@ -42,8 +42,8 @@ const hamt_proto = @{}
       skip_exists_check
 
   async add_key_u8(key_loc, skip_exists_check) ::
-    const {root, storage} = this
-    if skip_exists_check || await storage.exists_at(key_loc) ::
+    const {root, store_api} = this
+    if skip_exists_check || await store_api.exists_at(key_loc) ::
       const merged_root = await
         hamt_add_key @ root, key_loc
       return this.with_root(merged_root)

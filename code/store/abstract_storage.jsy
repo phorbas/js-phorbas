@@ -1,0 +1,8 @@
+export const abstract_storage = @{}
+  async batch_store(u8_kv_pairs) ::
+    throw new Exception('Concrete impl responsability')
+  async batch_fetch(u8_key_list) ::
+    throw new Exception('Concrete impl responsability')
+  async batch_exists(u8_key_list) ::
+    throw new Exception('Concrete impl responsability')
+

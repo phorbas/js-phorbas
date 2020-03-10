@@ -1,0 +1,34 @@
+import {u8_to_hex} from 'u8-utils'
+
+const _wm_hex_keys = new WeakMap()
+
+export function as_hex_key(u8_key) ::
+  if 'string' === typeof u8_key ::
+    throw new TypeError()
+
+  let hk = _wm_hex_keys.get(u8_key)
+  if undefined === hk ::
+    hk = u8_to_hex(u8_key)
+    _wm_hex_keys.set(u8_key, hk)
+  return hk
+
+export function as_hex_kv_pair([u8_key, u8_value]) ::
+  if 'string' === typeof u8_key ::
+    throw new TypeError()
+
+  let hk = _wm_hex_keys.get(u8_key)
+  if undefined === hk ::
+    hk = u8_to_hex(u8_key)
+    _wm_hex_keys.set(u8_key, hk)
+  return [hk, u8_value]
+
+export function as_hex_hkv_tuple([u8_key, u8_value]) ::
+  if 'string' === typeof u8_key ::
+    throw new TypeError()
+
+  let hk = _wm_hex_keys.get(u8_key)
+  if undefined === hk ::
+    hk = u8_to_hex(u8_key)
+    _wm_hex_keys.set(u8_key, hk)
+  return [hk, u8_key, u8_value]
+

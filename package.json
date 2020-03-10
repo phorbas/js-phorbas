@@ -23,8 +23,11 @@
   "module": "./esm/index.mjs",
   "browser": "./umd/index.js",
   "exports": {
-    "import": "./esm/index.mjs",
-    "require": "./cjs/index.cjs"
+    "./": "./",
+    ".": {
+      "import": "./esm/index.mjs",
+      "require": "./cjs/index.cjs"
+    }
   },
   "dependencies": {},
   "devDependencies": {

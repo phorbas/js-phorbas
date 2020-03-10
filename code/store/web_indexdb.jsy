@@ -1,81 +1,61 @@
-import store_api_proto from './store_api.jsy'
+const web_indexdb_store_proto = @{}
+  async batch_store(u8_kv_pairs) ::
+    const {kvdb, txn_done} = this._txn_rw()
+    for const [u8_key, u8_value] of u8_kv_pairs ::
+      kvdb.put @ u8_value, u8_key
+
+    await txn_done
+    return true
+
+  async batch_fetch(u8_key_list) ::
+    const {kvdb, txn_done} = this._txn_ro()
+    const ans = []
+    for const u8_key of u8_key_list ::
+      ans.push @# u8_key, kvdb.get @ u8_key
+
+    await txn_done
+    for const tpl of ans ::
+      tpl[1] = tpl[1].result
+    return ans
+
+  async batch_exists(u8_key_list) ::
+    const {kvdb, txn_done} = this._txn_ro()
+    const ans = []
+    for const u8_key of u8_key_list ::
+      ans.push @# u8_key, kvdb.count @ u8_key
+
+    await txn_done
+    for const tpl of ans ::
+      tpl[1] = tpl[1].result
+    return ans
+
 
 export async function web_indexdb_store(db_name='phorbas', store_name='kv') ::
-  const {txn_ro, txn_rw} = with_idb_store_ctx @
-    await idb_open(db_name, store_name), store_name
+  const {txn_ro, txn_rw} = await
+    _idb_with_bound_txns(db_name, store_name)
+
+  return Object.create @ web_indexdb_store_proto,
+    @{} _txn_ro: @{} value: txn_ro
+        _txn_rw: @{} value: txn_rw
+
+
+async function _idb_with_bound_txns(db_name, store_name) ::
+  const idb = await new Promise @\ resolve, reject ::
+    const req = indexedDB.open(db_name, 1)
+    req.onupgradeneeded = @=> req.result.createObjectStore(store_name)
+    req.onsuccess = @=> resolve @ req.result
+    req.onerror = @=> reject @ req.error
 
   return @{}
-    __proto__: store_api_proto
-
-    async store_at(key, enc_content) ::
-      const {kv, txn_done} = txn_rw()
-      kv.put @ enc_content, key
-      await txn_done
-      return true
-    async batch_store(kv_pairs) ::
-      const {kv, txn_done} = txn_rw()
-      for const [key, enc_content] of kv_pairs ::
-        kv.put @ enc_content, key
-
-      await txn_done
-      return true
-
-
-    async fetch_at(key) ::
-      const {kv, txn_done} = txn_ro()
-      const ans = kv.get @ key
-      await txn_done
-      return ans.result
-    async batch_fetch(keys) ::
-      const {kv, txn_done} = txn_ro()
-      const ans = []
-      for const k of keys ::
-        ans.push @# k, kv.get @ k
-
-      await txn_done
-      for const tpl of ans ::
-        tpl[1] = tpl[1].result
-      return keys
-
-
-    async exists_at(key) ::
-      const {kv, txn_done} = txn_ro()
-      const ans = kv.count @ key
-      await txn_done
-      return 0 | ans.result
-    async batch_exists(keys) ::
-      const {kv, txn_done} = txn_ro()
-      const ans = []
-      for const k of keys ::
-        ans.push @# k, kv.count @ k
-
-      await txn_done
-      for const tpl of ans ::
-        tpl[1] = tpl[1].result
-      return ans
-
-
-function with_idb_store_ctx(idb, store_name) ::
-  return @{}
-    txn_ro: idb_txn.bind(null, idb, store_name, 'readonly')
-    txn_rw: idb_txn.bind(null, idb, store_name, 'readwrite')
+    txn_ro: _idb_txn.bind(null, idb, store_name, 'readonly')
+    txn_rw: _idb_txn.bind(null, idb, store_name, 'readwrite')
   
-function idb_txn(idb, store_name, mode) ::
+function _idb_txn(idb, store_name, mode) ::
   const txn = idb.transaction(store_name, mode)
   return @{} txn
-    kv: txn.objectStore(store_name)
+    kvdb: txn.objectStore(store_name)
     txn_done: new Promise @\ resolve, reject ::
       txn.oncomplete = resolve
       txn.onabort = txn.onerror = @=> reject @ txn.error
 
-function idb_open(db_name, store_name) ::
-  const req = indexedDB.open(db_name, 1)
-  req.onupgradeneeded = @=>
-    req.result.createObjectStore(store_name)
-  return idb_req(req)
-
-function idb_req(req) ::
-  return new Promise @\ resolve, reject ::
-    req.onsuccess = @=> resolve @ req.result
-    req.onerror = @=> reject @ req.error
 

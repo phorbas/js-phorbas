@@ -1,5 +1,4 @@
-import {as_hex_key} from './hex_keys.jsy'
-import store_api_proto from './store_api.jsy'
+import {as_hex_key} from './key_encodings.jsy'
 
 export async function js_map_store(db) ::
   const _db = db || new Map()
@@ -7,29 +6,25 @@ export async function js_map_store(db) ::
   const _db_get = key => _db.get @ key
 
   return @{}
-    __proto__: store_api_proto
+    key_encoding: 'hex'
 
-    async store_at(key, enc_content) ::
-      _db.set @ as_hex_key(key), enc_content
-      return true
-    async batch_store(kv_pairs) ::
-      for const [key, enc_content] of kv_pairs ::
-        _db.set @ as_hex_key(key), enc_content
+    async batch_store(u8_kv_pairs) ::
+      for const [u8_key, u8_value] of u8_kv_pairs ::
+        const hk = as_hex_key(u8_key)
+        _db.set @ hk, u8_value
       return true
 
-    async fetch_at(key) ::
-      return _db.get @ as_hex_key(key)
-    async batch_fetch(keys) ::
+    async batch_fetch(u8_key_list) ::
       const ans = []
-      for const k of keys ::
-        ans.push @# k, _db.get @ as_hex_key(k)
+      for const u8_key of u8_key_list ::
+        const hk = as_hex_key(u8_key)
+        ans.push @# u8_key, _db.get(hk)
       return ans
 
-    async exists_at(key) ::
-      return 0 | _db.has @ as_hex_key(key)
-    async batch_exists(keys) ::
+    async batch_exists(u8_key_list) ::
       const ans = []
-      for const k of keys ::
-        ans.push @# k, _db.has @ as_hex_key(k)
+      for const u8_key of u8_key_list ::
+        const hk = as_hex_key(u8_key)
+        ans.push @# u8_key, _db.has(hk)
       return ans
 

@@ -2,8 +2,8 @@ import {u8_to_hex} from 'u8-utils'
 
 export function hamt_sync_queue(dst_root, src_root, opt={}) ::
   const batch_size = opt.batch_size || 16
-  const dst_storage = dst_root.opaque.storage
-  const src_storage = src_root.opaque.storage
+  const dst_store_api = dst_root.opaque.store_api
+  const src_store_api = src_root.opaque.store_api
 
   let active=false, count, q_node, q_leaf
 
@@ -38,8 +38,8 @@ export function hamt_sync_queue(dst_root, src_root, opt={}) ::
       if batch_size > q.length ::
         q = q.concat @ q_leaf.splice(0, batch_size - q.length)
 
-      const keys_syncd = await dst_storage
-        .sync_absent_from @ src_storage, q
+      const keys_syncd = await dst_store_api
+        .sync_absent_from @ src_store_api, q
 
       count += keys_syncd.length
 

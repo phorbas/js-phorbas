@@ -5,10 +5,9 @@ const _wm_ctx_content = new WeakMap()
 
 export default keyctx_proto
 export const keyctx_proto = @{}
-  //storage: js_map_store()
-  with_storage(storage) ::
+  with_store(store_api) ::
     return Object.create @ this, @{}
-      storage: {value: storage}
+      store_api: {value: store_api}
 
 
   local() :: return _wm_ctx_content.get(this)
@@ -30,17 +29,17 @@ export const keyctx_proto = @{}
     return enc_content
 
   async store(attr) ::
-    const {storage, key_loc} = this
-    await storage.store_at @
-      key_loc, await this.encipher_content()
+    const {store_api, key_loc} = this
+    const enc_content = await this.encipher_content()
+    await store_api.store_at @ key_loc, enc_content
     return this.as_attr(attr)
 
   async as_attr(attr) ::
     return ! attr ? this : this[attr]
 
   exists() ::
-    const {storage, key_loc} = this
-    return storage.exists_at @ key_loc
+    const {store_api, key_loc} = this
+    return store_api.exists_at @ key_loc
 
   fetch_utf8() ::
     return this.fetch().then(u8_to_utf8)
@@ -55,8 +54,8 @@ export const keyctx_proto = @{}
     return p
 
   async _do_fetch() ::
-    const {storage, key_loc} = this
-    const enc_content = await storage.fetch_at(key_loc)
+    const {store_api, key_loc} = this
+    const enc_content = await store_api.fetch_at(key_loc)
     return enc_content instanceof Uint8Array
       ? this.decipher_content(enc_content)
       : enc_content

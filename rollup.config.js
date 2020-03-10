@@ -30,6 +30,8 @@ const plugins_web = [
 
 
 add_jsy('index', {module_name: pkg_name})
+add_jsy('store/js_map')
+add_jsy('store/web_indexdb')
 
 
 function add_jsy(src_name, opt={}) {

@@ -1,6 +1,6 @@
 export async function hamt_store(hamt_root, opt={}) ::
   const batch_size = opt.batch_size || 16
-  const {storage} = hamt_root.opaque
+  const {store_api} = hamt_root.opaque
 
   let q = [], active
   for const node of hamt_root.iter_dependency_tree() ::
@@ -10,11 +10,11 @@ export async function hamt_store(hamt_root, opt={}) ::
 
     if q.length > batch_size ::
       await active
-      active = storage.batch_store(q)
+      active = store_api.batch_store(q)
       q = []
 
   await active
-  active = storage.batch_store(q)
+  active = store_api.batch_store(q)
   q = []
   await active
 

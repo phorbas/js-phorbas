@@ -4,16 +4,14 @@ import { cbor_decode, cbor_encode } from 'cbor-codec'
 import { poem_lines } from '../poem.jsy'
 
 #IF PLAT_NODEJS
-  import @{}
-    tahoe_opaque, phorbas_hamt,
-    js_map_store,
+  import @{} tahoe_opaque, phorbas_hamt, js_map_store,
   from 'phorbas/esm/node/index.mjs'
 
 #ELIF PLAT_WEB
-  import @{}
-    tahoe_opaque, phorbas_hamt,
-    js_map_store, web_indexdb_store,
+  import @{} tahoe_opaque, phorbas_hamt, js_map_store,
   from 'phorbas/esm/web/index.js'
+
+  import { web_indexdb_store } from 'phorbas/esm/web/store/web_indexdb.js'
 
 
 describe @ 'hamt poem', @::

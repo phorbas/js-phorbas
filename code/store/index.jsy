@@ -1,4 +1,9 @@
-export * from './store_api.jsy'
+export * from './key_encodings.jsy'
+import { with_store_api } from './_store_api.jsy'
+export @{}
+  with_store_api
+  with_store_api as default
+
 export * from './js_map.jsy'
-export * from './web_indexdb.jsy'
+//export * from './web_indexdb.jsy'
 

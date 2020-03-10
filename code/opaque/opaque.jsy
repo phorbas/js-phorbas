@@ -1,16 +1,21 @@
 import {utf8_to_u8} from 'u8-utils'
 import {keyctx_proto} from './keyctx.jsy'
+import {with_store_api} from '../store/_store_api.jsy'
 
 const opaque_proto = @{}
   keyctx_proto: keyctx_proto
   kdf_ref: abstract_kdf
   kdf_loc: abstract_kdf
 
-  with_storage(storage) ::
-    const keyctx_proto = this.keyctx_proto.with_storage(storage)
+  with_storage(storage_impl) ::
+    return this.with_store @
+      with_store_api @ storage_impl
+
+  with_store(store_api) ::
+    const keyctx_proto = this.keyctx_proto.with_store(store_api)
     return Object.create @ this, @{}
       keyctx_proto: {value: keyctx_proto}
-      storage: {value: storage}
+      store_api: {value: store_api}
 
   async from_content(raw_content) ::
     raw_content = await _u8content(raw_content)
