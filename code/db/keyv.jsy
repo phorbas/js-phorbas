@@ -1,0 +1,24 @@
+export default with_keyv
+export async function with_keyv() ::
+
+  return @{}
+    async batch_store(u8_kv_pairs) ::
+      for const [u8_key, u8_value] of u8_kv_pairs ::
+        //const hk = as_hex_key(u8_key)
+        //_db.set @ hk, u8_value
+      return true
+
+    async batch_fetch(u8_key_list) ::
+      const ans = []
+      for const u8_key of u8_key_list ::
+        //const hk = as_hex_key(u8_key)
+        //ans.push @# u8_key, _db.get(hk)
+      return ans
+
+    async batch_exists(u8_key_list) ::
+      const ans = []
+      for const u8_key of u8_key_list ::
+        //const hk = as_hex_key(u8_key)
+        //ans.push @# u8_key, _db.has(hk)
+      return ans
+

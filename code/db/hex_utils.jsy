@@ -1,4 +1,5 @@
 import {u8_to_hex} from 'u8-utils'
+export {u8_to_hex}
 
 const _wm_hex_keys = new WeakMap()
 

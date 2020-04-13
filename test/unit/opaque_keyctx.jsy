@@ -2,13 +2,11 @@ const { assert, expect } = require('chai')
 import { cbor_decode, cbor_encode } from 'cbor-codec'
 import { poem_lines } from '../poem.jsy'
 
+import { with_js_map } from 'phorbas/esm/db/js_map.mjs'
 #IF PLAT_NODEJS
-  import @{} tahoe_opaque, js_map_store
-  from 'phorbas/esm/node/index.mjs'
-
+  import {tahoe_opaque} from 'phorbas/esm/node/tahoe.mjs'
 #ELIF PLAT_WEB
-  import @{} tahoe_opaque, js_map_store
-  from 'phorbas/esm/web/index.js'
+  import {tahoe_opaque} from 'phorbas/esm/web/tahoe.mjs'
 
 
 describe @ 'opaque keyctx', @::
@@ -27,7 +25,7 @@ describe @ 'opaque keyctx', @::
        55, 127,   2,  18, 231, 226,  14,  55
 
     const opaque = tahoe_opaque.with_storage @
-      await js_map_store()
+      await with_js_map()
 
     ::
       const kctx = await opaque.store(src_string)
@@ -48,7 +46,7 @@ describe @ 'opaque keyctx', @::
        91, 230,  73, 170, 154, 210, 109,  33
 
     const opaque = tahoe_opaque.with_storage @
-      await js_map_store()
+      await with_js_map()
 
     const kctx = await opaque.from_key(known_key_ref)
     const ans = await kctx.fetch()

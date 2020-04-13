@@ -8,11 +8,9 @@ self-verifying data integrity properties.
 
 */
 
-import {u8_sha_256} from './iso_sha2_hashes.jsy'
-import {u8_aes_256_gcm} from './iso_aes_256_gcm.jsy'
-
-import {opaque_proto} from './opaque.jsy'
-import with_cipher from './keyctx_cipher.jsy'
+import {opaque_proto, with_cipher} from './opaque/index.jsy'
+import {u8_sha_256} from './kdfs/iso_sha2_hashes.jsy'
+import {u8_aes_256_gcm} from './ciphers/iso_aes_256_gcm.jsy'
 
 export default tahoe_opaque
 export const tahoe_opaque = @{}

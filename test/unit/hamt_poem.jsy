@@ -3,46 +3,46 @@ import { u8_to_hex } from 'u8-utils'
 import { cbor_decode, cbor_encode } from 'cbor-codec'
 import { poem_lines } from '../poem.jsy'
 
+import { phorbas_hamt } from 'phorbas/esm/index.mjs'
+import { with_js_map } from 'phorbas/esm/db/js_map.mjs'
+import { with_web_db } from 'phorbas/esm/db/web_db.mjs'
+
 #IF PLAT_NODEJS
-  import @{} tahoe_opaque, phorbas_hamt, js_map_store,
-  from 'phorbas/esm/node/index.mjs'
+  import {tahoe_opaque} from 'phorbas/esm/node/tahoe.mjs'
 
 #ELIF PLAT_WEB
-  import @{} tahoe_opaque, phorbas_hamt, js_map_store,
-  from 'phorbas/esm/web/index.js'
-
-  import { web_indexdb_store } from 'phorbas/esm/web/store/web_indexdb.js'
+  import {tahoe_opaque} from 'phorbas/esm/web/tahoe.mjs'
 
 
 describe @ 'hamt poem', @::
-  describe @ 'with js_map_store', @::
+  describe @ 'with with_js_map', @::
     it @ 'simple HAMT use', @::>
       await test_hamt_poem @
         tahoe_opaque.with_storage @
-          await js_map_store()
+          await with_js_map()
 
     it @ 'syncing HAMT', @::>
       await test_hamt_sync @
         tahoe_opaque.with_storage @
-          await js_map_store()
+          await with_js_map()
 
         tahoe_opaque.with_storage @
-          await js_map_store()
+          await with_js_map()
 
-  #IF PLAT_WEB
-    describe @ 'with web_indexdb_store', @::
+  if 'undefined' !== typeof indexedDB ::
+    describe @ 'with IndexedDB', @::
       it @ 'simple HAMT use', @::>
         await test_hamt_poem @
           tahoe_opaque.with_storage @
-            await web_indexdb_store()
+            await with_web_db()
 
       it @ 'syncing HAMT', @::>
         await test_hamt_sync @
           tahoe_opaque.with_storage @
-            await web_indexdb_store()
+            await with_web_db()
 
           tahoe_opaque.with_storage @
-            await web_indexdb_store()
+            await with_web_db()
 
   ;
 

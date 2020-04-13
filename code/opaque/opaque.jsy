@@ -1,6 +1,6 @@
 import {utf8_to_u8} from 'u8-utils'
 import {keyctx_proto} from './keyctx.jsy'
-import {with_store_api} from '../store/_store_api.jsy'
+import {with_store_api} from './_store_api.jsy'
 
 const opaque_proto = @{}
   keyctx_proto: keyctx_proto

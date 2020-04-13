@@ -1,7 +1,10 @@
 import pkg from './package.json'
 import rpi_resolve from '@rollup/plugin-node-resolve'
 import rpi_jsy from 'rollup-plugin-jsy-lite'
+/// import { terser as rpi_terser } from 'rollup-plugin-terser'
+//
 const pkg_name = (pkg.name || 'private').replace('-', '_')
+const plat_default = {generic: true}
 
 const configs = []
 export default configs
@@ -22,29 +25,33 @@ const plugins_nodejs = [
 const plugins_web = [
   rpi_jsy({defines: {PLAT_WEB: true}}),
   ... plugins ]
-
-
-// Allow Minification -- https://github.com/TrySound/rollup-plugin-terser
-/// import { terser as rpi_terser } from 'rollup-plugin-terser'
-/// const plugins_min = plugins_web.concat([ rpi_terser({}) ])
+const plugins_min = null && [
+  ... plugins_web,
+  rpi_terser({}) ]
 
 
 add_jsy('index', {module_name: pkg_name})
-add_jsy('store/js_map')
-add_jsy('store/web_indexdb')
+add_jsy('tahoe', {plat: {node: true, web: true}})
+add_jsy('db/hex_utils')
+add_jsy('db/js_map')
+add_jsy('db/web_db')
+add_jsy('db/level')
+add_jsy('db/s3')
+add_jsy('db/keyv')
 
 
 function add_jsy(src_name, opt={}) {
   let module_name = opt.module_name || `${pkg_name}_${src_name}`
+  const plat = opt.plat || plat_default
 
-  if (plugins_generic)
+  if (plugins_generic && plat.generic)
     configs.push({
       input: `code/${src_name}.jsy`,
       plugins: plugins_generic, external,
       output: [
         { file: `esm/${src_name}.mjs`, format: 'es', sourcemap } ]})
 
-  if (plugins_nodejs)
+  if (plugins_nodejs && plat.node)
     configs.push({
       input: `code/${src_name}.jsy`,
       plugins: plugins_nodejs, external,
@@ -52,15 +59,15 @@ function add_jsy(src_name, opt={}) {
         { file: `cjs/${src_name}.cjs`, format: 'cjs', exports:'named', sourcemap },
         { file: `esm/node/${src_name}.mjs`, format: 'es', sourcemap } ]})
 
-  if (plugins_web)
+  if (plugins_web && plat.web)
     configs.push({
       input: `code/${src_name}.jsy`,
       plugins: plugins_web, external,
       output: [
         { file: `umd/${src_name}.js`, format: 'umd', name:module_name, exports:'named', sourcemap },
-        { file: `esm/web/${src_name}.js`, format: 'es', sourcemap } ]})
+        { file: `esm/web/${src_name}.mjs`, format: 'es', sourcemap } ]})
 
-  if ('undefined' !== typeof plugins_min && plugins_min)
+  if (plugins_min && plat.web)
     configs.push({
       input: `code/${src_name}.jsy`,
       plugins: plugins_min, external,

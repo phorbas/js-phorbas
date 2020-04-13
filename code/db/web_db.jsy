@@ -1,4 +1,17 @@
-const web_indexdb_store_proto = @{}
+export @{}
+  with_web_db as default,
+  with_web_db as with_webdb,
+
+export async function with_web_db(db_options) ::
+  const {txn_ro, txn_rw} = await
+    _idb_with_bound_txns(db_options)
+
+  return Object.create @ indexdb_store_proto,
+    @{} _txn_ro: @{} value: txn_ro
+        _txn_rw: @{} value: txn_rw
+
+
+const indexdb_store_proto = @{}
   async batch_store(u8_kv_pairs) ::
     const {kvdb, txn_done} = this._txn_rw()
     for const [u8_key, u8_value] of u8_kv_pairs ::
@@ -30,18 +43,14 @@ const web_indexdb_store_proto = @{}
     return ans
 
 
-export async function web_indexdb_store(db_name='phorbas', store_name='kv') ::
-  const {txn_ro, txn_rw} = await
-    _idb_with_bound_txns(db_name, store_name)
+async function _idb_with_bound_txns(db_options={}) ::
+  if 'string' === typeof db_options ::
+    const [db, store] = db_options.split('/')
+    db_options = {db, store}
 
-  return Object.create @ web_indexdb_store_proto,
-    @{} _txn_ro: @{} value: txn_ro
-        _txn_rw: @{} value: txn_rw
-
-
-async function _idb_with_bound_txns(db_name, store_name) ::
+  const store_name = db_options.store || 'kv'
   const idb = await new Promise @\ resolve, reject ::
-    const req = indexedDB.open(db_name, 1)
+    const req = indexedDB.open @ db_options.db || 'phorbas', 1
     req.onupgradeneeded = @=> req.result.createObjectStore(store_name)
     req.onsuccess = @=> resolve @ req.result
     req.onerror = @=> reject @ req.error
@@ -57,5 +66,4 @@ function _idb_txn(idb, store_name, mode) ::
     txn_done: new Promise @\ resolve, reject ::
       txn.oncomplete = resolve
       txn.onabort = txn.onerror = @=> reject @ txn.error
-
 

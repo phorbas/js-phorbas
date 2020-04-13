@@ -1,4 +1,4 @@
-export const abstract_storage = @{}
+export const abstract_db = @{}
   async batch_store(u8_kv_pairs) ::
     throw new Exception('Concrete impl responsability')
   async batch_fetch(u8_key_list) ::

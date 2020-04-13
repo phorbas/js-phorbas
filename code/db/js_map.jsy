@@ -1,13 +1,15 @@
-import {as_hex_key} from './key_encodings.jsy'
+import {as_hex_key} from './hex_utils.jsy'
 
-export async function js_map_store(db) ::
-  const _db = db || new Map()
+export @{}
+  with_map as with_js_map,
+  with_map as default,
+
+export async function with_map(map_db) ::
+  const _db = map_db || new Map()
   const _db_has = key => 0 | _db.has @ key
   const _db_get = key => _db.get @ key
 
   return @{}
-    key_encoding: 'hex'
-
     async batch_store(u8_kv_pairs) ::
       for const [u8_key, u8_value] of u8_kv_pairs ::
         const hk = as_hex_key(u8_key)
