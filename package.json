@@ -30,13 +30,7 @@
     }
   },
   "dependencies": {},
-  "devDependencies": {
-    "@rollup/plugin-node-resolve": "^7.1.1",
-    "cbor-codec": "^0.2.2",
-    "rollup": "^1.32.1",
-    "rollup-plugin-jsy-lite": "^1.5.3",
-    "u8-utils": "^0.3.5"
-  },
+  "devDependencies": {},
   "scripts": {
     "clean": "rm -rf ./cjs/* ./esm/* ./umd/*",
     "build": "rollup --config",
